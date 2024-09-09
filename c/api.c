@@ -27,9 +27,12 @@ int blob_msg( blob_t* blob, int16_t id, const uint8_t* payload, size_t payload_s
 
 // -------------------
 bool test_blobs();
+bool test_conn();
 
 int main( int argc, char** argv ) {
   if( !test_blobs() )
+    return -1;
+  if( !test_conn() )
     return -1;
   printf( "OK\n");
   return 0;

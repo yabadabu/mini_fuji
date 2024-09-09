@@ -1,8 +1,10 @@
 #include "blob.h"
+#include "connection.h"
 #include <assert.h>
 #include <stdio.h>      // printf
 
 bool test_blobs() {
+  printf( "Tessting blobs...\n");
 
   blob_t b0;
   blob_create( &b0, 6 );
@@ -47,3 +49,18 @@ bool test_blobs() {
 
   return true;
 } 
+
+
+bool test_conn() {
+  printf( "Tessting connections...\n");
+  conn_t conn;
+  conn_create( &conn );
+  conn_update( &conn );
+  
+  ptpip_open_session( &conn );
+
+  // blob_t msg_open_session;
+  // conn_create_cmd_msg( &conn, &msg_open_session, &cmd_open_session );
+  // blob_dump( &msg_open_session );
+  return true;
+}

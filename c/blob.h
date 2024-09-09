@@ -9,10 +9,11 @@ typedef struct {
   uint8_t* data;
 } blob_t;
 
-int blob_create( blob_t* blob, uint32_t num_bytes );
-int blob_resize( blob_t* blob, uint32_t new_size );
-int blob_clear( blob_t* blob );
-int blob_destroy( blob_t* blob );
+void blob_create( blob_t* blob, uint32_t num_bytes );
+void blob_reserve( blob_t* blob, uint32_t num_bytes );
+void blob_resize( blob_t* blob, uint32_t new_size );
+void blob_clear( blob_t* blob );
+void blob_destroy( blob_t* blob );
 bool blob_is_valid( const blob_t* blob );
 void blob_append_blob( blob_t* blob, const blob_t* other );
 void blob_append_data( blob_t* blob, const void* new_data, uint32_t data_size );

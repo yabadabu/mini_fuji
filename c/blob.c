@@ -4,32 +4,24 @@
 #include <assert.h>
 #include "blob.h"
 
-typedef struct { int32_t value; } handle_t;
-typedef struct { int32_t value; } storage_id_t;
-
-typedef struct { 
-  int32_t  count;
-  handle_t data[];
-} array_handles_t;
-
-typedef struct {
-  // ...
-} connection_t;
-
-int blob_create( blob_t* blob, uint32_t num_bytes ) {
+void blob_create( blob_t* blob, uint32_t num_bytes ) {
   if( num_bytes > 0 )
     blob->data = malloc( num_bytes );
   else
     blob->data = NULL;
   blob->count = num_bytes;
   blob->reserved = num_bytes;
-  return 0;
 }
 
-int blob_resize( blob_t* blob, uint32_t new_size ) {
+void blob_reserve( blob_t* blob, uint32_t num_bytes ) {
+  blob_resize( blob, num_bytes );
+  blob_clear( blob );
+}
+
+void blob_resize( blob_t* blob, uint32_t new_size ) {
   if( new_size <= blob->reserved ) {
     blob->count = new_size;
-    return 0;
+    return;
   }
   if( !blob->reserved )
     blob->reserved = 16;
@@ -37,21 +29,18 @@ int blob_resize( blob_t* blob, uint32_t new_size ) {
     blob->reserved *= 2;
   blob->data = realloc( blob->data, blob->reserved );
   blob->count = new_size;
-  return 0;
 }
 
-int blob_clear( blob_t* blob ) {
+void blob_clear( blob_t* blob ) {
   blob->count = 0;
-  return 0;
 }
 
-int blob_destroy( blob_t* blob ) {
+void blob_destroy( blob_t* blob ) {
   if( blob->data )
     free( blob->data );
   blob->data = NULL;
   blob->reserved = 0;
   blob->count = 0;
-  return 0;
 }
 
 uint32_t blob_size( const blob_t *blob ) {

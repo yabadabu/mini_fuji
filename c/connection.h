@@ -4,11 +4,23 @@
 
 // ---------------------------------------
 typedef struct {
-  blob_t recv_data;
+  uint16_t    id;
+  const char* name;
+} cmd_t;
+
+extern cmd_t cmd_open_session;
+
+// ---------------------------------------
+typedef struct {
+  blob_t   recv_data;
+  blob_t   curr_packet;
+  uint32_t sequence_id;
 } conn_t;
 
+bool conn_create( conn_t* );
 void conn_add_data( conn_t*, const void* new_data, uint32_t data_size );
-void conn_update( conn_t*  );
+void conn_update( conn_t* );
+void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd_id );
 
 // ---------------------------------------
 typedef struct {
@@ -18,7 +30,6 @@ typedef struct {
   uint32_t counter;
   uint8_t  payload[];
 } packet_t;
-
 // ---------------------------------------
 typedef struct { 
   int16_t id; 
@@ -45,13 +56,13 @@ typedef struct {
   handle_t handles[7];
 } handles_t;
 
-int cmd_get_storage_ids( conn_t*, storage_ids_t* ); 
-int cmd_get_objs( conn_t*, handles_t* ); 
-int cmd_get_prop( conn_t*, uint16_t prop_id, prop_t* prop ); 
-int cmd_set_prop( conn_t*, uint16_t prop_id, const prop_t* prop ); 
-int cmd_open_session( conn_t* );
-int cmd_close_session( conn_t* );
-int cmd_get_obj( conn_t*, handle_t handle, blob_t* out_obj, void (*opt_progress)( float ) );
-int cmd_del_obj( conn_t*, handle_t handle );
+int ptpip_get_storage_ids( conn_t*, storage_ids_t* ); 
+int ptpip_get_objs( conn_t*, handles_t* ); 
+int ptpip_get_prop( conn_t*, uint16_t prop_id, prop_t* prop ); 
+int ptpip_set_prop( conn_t*, uint16_t prop_id, const prop_t* prop ); 
+int ptpip_open_session( conn_t* );
+int ptpip_close_session( conn_t* );
+int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, void (*opt_progress)( float ) );
+int ptpip_del_obj( conn_t*, handle_t handle );
 
 
