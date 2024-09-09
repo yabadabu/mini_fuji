@@ -32,11 +32,23 @@ typedef struct {
   uint32_t counter;
   uint8_t  payload[];
 } packet_t;
+
 // ---------------------------------------
+enum eValueType {
+  PDT_UNKNOWN = 0, 
+  PDT_U16, 
+  PDT_U32, 
+  //U64, 
+  PDT_String
+};
+
 typedef struct { 
-  int16_t id; 
-  int32_t ivalue;
-  blob_t  blob;
+  int16_t     id; 
+  const char* name;
+  enum eValueType  data_type;
+  int16_t     val16;
+  int32_t     val32;
+  blob_t      blob;
 } prop_t;
 
 // ---------------------------------------
@@ -67,4 +79,6 @@ int ptpip_close_session( conn_t* );
 int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, void (*opt_progress)( float ) );
 int ptpip_del_obj( conn_t*, handle_t handle );
 
+// ---------------------------------------
+extern prop_t prop_quality;
 

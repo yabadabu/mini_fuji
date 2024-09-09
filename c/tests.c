@@ -93,6 +93,38 @@ void blob_from( blob_t* b, const char* hex_data ) {
 
 } 
 
+bool test_get_storage(conn_t* c) {
+  printf( "test_get_storage\n" );
+  // Send request
+  storage_ids_t storage_ids;
+  ptpip_get_storage_ids( c, &storage_ids );
+  // Fake network answer
+  blob_t ans;
+  blob_from( &ans, "18000000 0200 0410 05000000 020000000100001002000010");
+  conn_add_data( c, ans.data, ans.count );
+  conn_update( c );
+  assert( storage_ids.count == 2 );
+  assert( storage_ids.ids[0].storage_id == 0x10000001 );
+  assert( storage_ids.ids[1].storage_id == 0x10000002 );
+  return true;
+}
+
+bool test_get_prop(conn_t* c) {
+  printf( "test_get_prop\n" );
+  prop_t p = prop_quality;
+  ptpip_get_prop( c, &p );
+
+  blob_t ans;
+  blob_from( &ans, "0e000000 0200 1510 05000000 0100");
+  blob_dump( &ans );
+  conn_add_data( c, ans.data, ans.count );
+  conn_update( c );
+  assert( c->recv_data.count == 0);
+  assert( p.id == prop_quality.id );
+  assert( p.val16 == 0x0001 );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -106,23 +138,15 @@ bool test_conn() {
   printf( "ptpip_close_session\n");
   ptpip_open_session( c );
   printf( "Test open session\n" );
-  prop_t p = { .id = 0x5005 };
-  ptpip_get_prop( c, &p );
-  printf( "Get prop\n" );
+
 
   printf( "basic msgs complete\n");
   
-  // Send request
-  storage_ids_t storage_ids;
-  ptpip_get_storage_ids( c, &storage_ids );
-  // Fake network answer
-  blob_t storage_ids_ans;
-  blob_from( &storage_ids_ans, "18000000 0200 0410 05000000 020000000100001002000010");
-  conn_add_data( c, storage_ids_ans.data, storage_ids_ans.count );
-  conn_update( c );
-  assert( storage_ids.count == 2 );
-  assert( storage_ids.ids[0].storage_id == 0x10000001 );
-  assert( storage_ids.ids[1].storage_id == 0x10000002 );
+  if( !test_get_storage(c) )
+    return false;
+
+  if( !test_get_prop(c) )
+    return false;
 
   // blob_t msg_open_session;
   // conn_create_cmd_msg( &conn, &msg_open_session, &cmd_open_session );
