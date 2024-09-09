@@ -9,6 +9,7 @@ cmd_t cmd_close_session     = { .id = 0x1003, .name = "close_session" };
 cmd_t cmd_initiate_capture  = { .id = 0x100e, .name = "initiate_capture" };
 cmd_t cmd_initiate_open_capture  = { .id = 0x101c, .name = "initiate_open_capture" };
 cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
+cmd_t cmd_del_obj           = { .id = 0x100b, .name = "del_obj" };
 
 // ------------------------------------------------------
 int parse_get_prop( const blob_t* args, void* output ) {
@@ -187,6 +188,14 @@ int ptpip_basic_cmd( conn_t* conn, cmd_t* cmd ) {
   return 0;
 }
 
+int ptpip_basic_cmd_u32( conn_t* conn, cmd_t* cmd, uint32_t payload_int, void* output ) {
+  blob_t msg;
+  blob_create( &msg, 0 );
+  conn_create_cmd_msg_u32( conn, &msg, cmd, payload_int );
+  conn_transaction( conn, &msg, cmd, output );
+  return 0;
+}
+
 // -------------------------------------------------------------
 int ptpip_open_session( conn_t* conn ) {
   return ptpip_basic_cmd( conn, &cmd_open_session );
@@ -215,12 +224,7 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
 }
 
 int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
-  assert( prop );
-  blob_t msg;
-  blob_create( &msg, 0 );
-  conn_create_cmd_msg_u32( conn, &msg, &cmd_get_prop, prop->id );
-  conn_transaction( conn, &msg, &cmd_get_prop, prop );
-  return 0;
+  return ptpip_basic_cmd_u32( conn, &cmd_get_prop, prop->id, prop );
 }
 
 int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
@@ -242,5 +246,9 @@ int ptpip_initiate_open_capture( conn_t* conn ) {
 
 int ptpip_terminate_capture( conn_t* conn ) {
   return ptpip_basic_cmd( conn, &cmd_terminate_capture );
+}
+
+int ptpip_del_obj( conn_t* conn, handle_t handle ) {
+  return ptpip_basic_cmd_u32( conn, &cmd_del_obj, handle.value, NULL );
 }
 

@@ -151,6 +151,13 @@ bool test_terminate_capture(conn_t* c) {
   return true;
 }
 
+bool test_del_obj(conn_t* c) {
+  handle_t h = { .value = 0x88224411 };
+  printf( "test_del_obj\n" );
+  ptpip_del_obj( c, h );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -183,6 +190,9 @@ bool test_conn() {
     return false;
 
   if( !test_terminate_capture(c) )
+    return false;
+
+  if( !test_del_obj(c) )
     return false;
 
   // blob_t msg_open_session;
