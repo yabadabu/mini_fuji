@@ -58,6 +58,8 @@ bool test_conn() {
   conn_update( &conn );
   
   ptpip_open_session( &conn );
+  prop_t p = { .id = 0x5005 };
+  ptpip_get_prop( &conn, &p );
 
   // blob_t msg_open_session;
   // conn_create_cmd_msg( &conn, &msg_open_session, &cmd_open_session );

@@ -2,6 +2,13 @@
 #include <stdio.h>
 #include "connection.h"
 
+cmd_t cmd_open_session  = { .id = 0x1002, .name = "open_session" };
+cmd_t cmd_close_session = { .id = 0x1003, .name = "close_session" };
+cmd_t cmd_get_prop      = { .id = 0x1014, .name = "get_prop" };
+const uint16_t msg_type_cmd  = 0x0001;
+const uint16_t msg_type_data = 0x0002;
+const uint16_t msg_type_end  = 0x0003;
+
 // Local functions
 bool conn_has_packet_ready( conn_t*, uint32_t* packet_size );
 uint32_t conn_next_sequence( conn_t* );
@@ -65,12 +72,8 @@ void conn_update( conn_t* conn ) {
   
 }
 
-cmd_t cmd_open_session = { .id = 0x1015, .name = "open_session" };
-
-void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd ) {
-  uint16_t msg_type = 0x0001;
-  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
-  uint32_t msg_full_size = 4 + 2 + 2 + 4; // + payload
+void create_cmd_msg(  blob_t* msg, const cmd_t* cmd, uint16_t msg_type, uint32_t msg_seq_id, uint32_t payload_size ) {
+  uint32_t msg_full_size = 4 + 2 + 2 + 4 + payload_size;
   blob_resize( msg, msg_full_size );
   blob_write_u32le( msg, 0, msg_full_size );
   blob_write_u16le( msg, 4, msg_type );
@@ -78,8 +81,31 @@ void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd ) {
   blob_write_u32le( msg, 8, msg_seq_id );
 }
 
+void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd ) {
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 0 );
+}
+
+void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint32_t payload_int ) {
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 4 );
+  blob_write_u32le( msg, 12, payload_int );
+}
+
 int ptpip_open_session( conn_t* conn ) {
   blob_t msg;
   conn_create_cmd_msg( conn, &msg, &cmd_open_session );
+  conn_send( conn, &msg );
+}
+
+int ptpip_close_session( conn_t* conn ) {
+  blob_t msg;
+  conn_create_cmd_msg( conn, &msg, &cmd_close_session );
+  conn_send( conn, &msg );
+}
+
+int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
+  blob_t msg;
+  conn_create_cmd_msg_u32( conn, &msg, &cmd_get_prop, prop->id );
   conn_send( conn, &msg );
 }

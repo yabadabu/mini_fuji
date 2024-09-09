@@ -9,6 +9,8 @@ typedef struct {
 } cmd_t;
 
 extern cmd_t cmd_open_session;
+extern cmd_t cmd_close_session;
+extern cmd_t cmd_get_prop;
 
 // ---------------------------------------
 typedef struct {
@@ -58,7 +60,7 @@ typedef struct {
 
 int ptpip_get_storage_ids( conn_t*, storage_ids_t* ); 
 int ptpip_get_objs( conn_t*, handles_t* ); 
-int ptpip_get_prop( conn_t*, uint16_t prop_id, prop_t* prop ); 
+int ptpip_get_prop( conn_t*, prop_t* prop ); 
 int ptpip_set_prop( conn_t*, uint16_t prop_id, const prop_t* prop ); 
 int ptpip_open_session( conn_t* );
 int ptpip_close_session( conn_t* );
