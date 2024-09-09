@@ -38,7 +38,7 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
   blob_append_data( &conn->recv_data, new_data, data_size );
 }
 
-void conn_send( conn_t*, const blob_t* data ) {
+void conn_send( conn_t* conn, const blob_t* data ) {
   printf( "Sending %4d bytes : ", blob_size( data ) );
   blob_dump( data );
 }
@@ -94,18 +94,24 @@ void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint3
 
 int ptpip_open_session( conn_t* conn ) {
   blob_t msg;
+  blob_create( &msg, 0 );
   conn_create_cmd_msg( conn, &msg, &cmd_open_session );
   conn_send( conn, &msg );
+  return 0;
 }
 
 int ptpip_close_session( conn_t* conn ) {
   blob_t msg;
+  blob_create( &msg, 0 );
   conn_create_cmd_msg( conn, &msg, &cmd_close_session );
   conn_send( conn, &msg );
+  return 0;
 }
 
 int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
   blob_t msg;
+  blob_create( &msg, 0 );
   conn_create_cmd_msg_u32( conn, &msg, &cmd_get_prop, prop->id );
   conn_send( conn, &msg );
+  return 0;
 }

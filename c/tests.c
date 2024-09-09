@@ -31,7 +31,7 @@ bool test_blobs() {
   assert( b0.count == 6 + 4 );
   assert( b0.data[0] == 0x44 );
   assert( b0.data[6] == 0x55 ); 
-  blob_read_u16le( &b0, 6 ) == 0x6655;
+  assert( blob_read_u16le( &b0, 6 ) == 0x6655 );
 
   blob_t b2;
   blob_create( &b2, 0 );
@@ -57,7 +57,9 @@ bool test_conn() {
   conn_create( &conn );
   conn_update( &conn );
   
+  printf( "Test open session\n" );
   ptpip_open_session( &conn );
+
   prop_t p = { .id = 0x5005 };
   ptpip_get_prop( &conn, &p );
 
