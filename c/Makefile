@@ -9,3 +9,5 @@ demo : ${SRCS} ${HEADERS}
 
 watch: 
 	node watcher -v
+
+.phony : demo

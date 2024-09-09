@@ -6,17 +6,17 @@
 typedef struct {
   uint16_t    id;
   const char* name;
+  int       (*parse)( const blob_t*, void* );
 } cmd_t;
-
-extern cmd_t cmd_open_session;
-extern cmd_t cmd_close_session;
-extern cmd_t cmd_get_prop;
 
 // ---------------------------------------
 typedef struct {
   blob_t   recv_data;
   blob_t   curr_packet;
+  blob_t   last_answer;
   uint32_t sequence_id;
+  cmd_t*   curr_cmd;
+  void*    curr_output;
 } conn_t;
 
 bool conn_create( conn_t* );

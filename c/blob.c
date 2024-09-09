@@ -28,6 +28,7 @@ void blob_resize( blob_t* blob, uint32_t new_size ) {
   while( blob->reserved < new_size )
     blob->reserved *= 2;
   blob->data = realloc( blob->data, blob->reserved );
+  assert( blob->data );
   blob->count = new_size;
 }
 
@@ -52,6 +53,8 @@ void blob_append_blob( blob_t* blob, const blob_t* other ) {
 }
 
 void blob_append_data( blob_t* blob, const void* new_data, uint32_t data_size ) {
+  assert( blob_is_valid( blob ) );
+  assert( new_data );
   int32_t prev_sz = blob->count;
   int32_t new_sz = blob->count + data_size;
   blob_resize( blob, new_sz );
@@ -106,14 +109,15 @@ uint32_t blob_read_u32le( const blob_t* blob, uint32_t offset ) {
 }
 
 bool blob_is_valid( const blob_t* blob ) {
-  return blob && blob->data;
+  return blob && blob->data && blob->count < 16384 && blob->reserved >= blob->count;
 }
 
 void blob_dump( const blob_t* blob ) {
+  printf( "%4d / %4d %p : ", blob->count, blob->reserved, blob->data );
   for( int i=0; i<blob->count; ++i ) {
     printf( "%02x ", blob->data[i] );
-    if( (i+1) % 16 == 0)
-      printf( "\n");
+    // if( (i+1) % 16 == 0)
+    //   printf( "\n");
   }
   printf( "\n");
 }
