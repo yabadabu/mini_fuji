@@ -125,6 +125,14 @@ bool test_get_prop(conn_t* c) {
   return true;
 }
 
+bool test_set_prop(conn_t* c) {
+  printf( "test_set_prop\n" );
+  prop_t p = prop_quality;
+  p.val16 = 2;
+  ptpip_set_prop( c, &p );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -139,13 +147,15 @@ bool test_conn() {
   ptpip_open_session( c );
   printf( "Test open session\n" );
 
-
   printf( "basic msgs complete\n");
   
   if( !test_get_storage(c) )
     return false;
 
   if( !test_get_prop(c) )
+    return false;
+
+  if( !test_set_prop(c) )
     return false;
 
   // blob_t msg_open_session;

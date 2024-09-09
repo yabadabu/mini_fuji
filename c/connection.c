@@ -22,14 +22,19 @@ int parse_get_prop( const blob_t* args, void* output ) {
     assert( blob_size( args ) == 4 );
     prop->val32 = blob_read_u32le( args, 0 );
   }
-  
+
   return 0; 
 }
 
 cmd_t cmd_get_prop = { 
-  .id = 0x1004, 
+  .id = 0x1014, 
   .name = "get_prop", 
   .parse = &parse_get_prop 
+};
+
+cmd_t cmd_set_prop = { 
+  .id = 0x1015, 
+  .name = "set_prop", 
 };
 
 // ------------------------------------------------------
@@ -55,6 +60,8 @@ cmd_t cmd_get_storage_ids = {
 const uint16_t msg_type_cmd  = 0x0001;
 const uint16_t msg_type_data = 0x0002;
 const uint16_t msg_type_end  = 0x0003;
+
+const uint32_t offset_payload = 12;
 
 // ------------------------------------------------------
 // Local functions
@@ -121,8 +128,8 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   printf( "%d bytes %04x %04x %08x CurrCmd:%s\n", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
   if( conn->curr_cmd ) {
     blob_t args;
-    args.data = msg->data + 12;
-    args.count = packet_size - 12;
+    args.data = msg->data + offset_payload;
+    args.count = packet_size - offset_payload;
     args.reserved = 0;
     conn->curr_cmd->parse( &args, conn->curr_output );
   } 
@@ -166,7 +173,7 @@ void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd ) {
 void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint32_t payload_int ) {
   uint32_t msg_seq_id = conn_next_msg_sequence( conn );
   create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 4 );
-  blob_write_u32le( msg, 12, payload_int );
+  blob_write_u32le( msg, offset_payload, payload_int );
 }
 
 // -------------------------------------------------------------
@@ -183,6 +190,24 @@ int ptpip_close_session( conn_t* conn ) {
   blob_create( &msg, 0 );
   conn_create_cmd_msg( conn, &msg, &cmd_close_session );
   conn_transaction( conn, &msg, &cmd_close_session, NULL );
+  return 0;
+}
+
+int ptpip_set_prop( conn_t* conn, const prop_t* prop ) {
+  assert( prop );
+  blob_t msg;
+  blob_create( &msg, 0 );
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  cmd_t* cmd = &cmd_set_prop;
+  
+  create_cmd_msg( &msg, cmd, msg_type_cmd, msg_seq_id, 4 );
+  blob_write_u32le( &msg, offset_payload, (prop->id & 0xffff) );
+  conn_send( conn, &msg );
+
+  create_cmd_msg( &msg, cmd, msg_type_data, msg_seq_id, 2 );
+  blob_write_u16le( &msg, offset_payload, prop->val16 );
+
+  conn_transaction( conn, &msg, cmd, prop );
   return 0;
 }
 
