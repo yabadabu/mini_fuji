@@ -133,6 +133,24 @@ bool test_set_prop(conn_t* c) {
   return true;
 }
 
+bool test_initiate_capture(conn_t* c) {
+  printf( "test_initiate_capture\n" );
+  ptpip_initiate_capture( c );
+  return true;
+}
+
+bool test_initiate_open_capture(conn_t* c) {
+  printf( "test_initiate_open_capture\n" );
+  ptpip_initiate_open_capture( c );
+  return true;
+}
+
+bool test_terminate_capture(conn_t* c) {
+  printf( "test_terminate_capture\n" );
+  ptpip_terminate_capture( c );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -156,6 +174,15 @@ bool test_conn() {
     return false;
 
   if( !test_set_prop(c) )
+    return false;
+
+  if( !test_initiate_capture(c) )
+    return false;
+
+  if( !test_initiate_open_capture(c) )
+    return false;
+
+  if( !test_terminate_capture(c) )
     return false;
 
   // blob_t msg_open_session;

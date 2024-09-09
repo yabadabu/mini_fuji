@@ -4,8 +4,11 @@
 
 prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16 };
 
-cmd_t cmd_open_session    = { .id = 0x1002, .name = "open_session" };
-cmd_t cmd_close_session   = { .id = 0x1003, .name = "close_session" };
+cmd_t cmd_open_session      = { .id = 0x1002, .name = "open_session" };
+cmd_t cmd_close_session     = { .id = 0x1003, .name = "close_session" };
+cmd_t cmd_initiate_capture  = { .id = 0x100e, .name = "initiate_capture" };
+cmd_t cmd_initiate_open_capture  = { .id = 0x101c, .name = "initiate_open_capture" };
+cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
 
 // ------------------------------------------------------
 int parse_get_prop( const blob_t* args, void* output ) {
@@ -176,24 +179,24 @@ void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint3
   blob_write_u32le( msg, offset_payload, payload_int );
 }
 
-// -------------------------------------------------------------
-int ptpip_open_session( conn_t* conn ) {
+int ptpip_basic_cmd( conn_t* conn, cmd_t* cmd ) {
   blob_t msg;
   blob_create( &msg, 0 );
-  conn_create_cmd_msg( conn, &msg, &cmd_open_session );
-  conn_transaction( conn, &msg, &cmd_open_session, NULL );
+  conn_create_cmd_msg( conn, &msg, cmd );
+  conn_transaction( conn, &msg, cmd, NULL );
   return 0;
+}
+
+// -------------------------------------------------------------
+int ptpip_open_session( conn_t* conn ) {
+  return ptpip_basic_cmd( conn, &cmd_open_session );
 }
 
 int ptpip_close_session( conn_t* conn ) {
-  blob_t msg;
-  blob_create( &msg, 0 );
-  conn_create_cmd_msg( conn, &msg, &cmd_close_session );
-  conn_transaction( conn, &msg, &cmd_close_session, NULL );
-  return 0;
+  return ptpip_basic_cmd( conn, &cmd_close_session );
 }
 
-int ptpip_set_prop( conn_t* conn, const prop_t* prop ) {
+int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
   assert( prop );
   blob_t msg;
   blob_create( &msg, 0 );
@@ -228,3 +231,16 @@ int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
   conn_transaction( conn, &msg, &cmd_get_storage_ids, storage_ids );
   return 0;
 }
+
+int ptpip_initiate_capture( conn_t* conn ) {
+  return ptpip_basic_cmd( conn, &cmd_initiate_capture );
+}
+
+int ptpip_initiate_open_capture( conn_t* conn ) {
+  return ptpip_basic_cmd( conn, &cmd_initiate_open_capture );
+}
+
+int ptpip_terminate_capture( conn_t* conn ) {
+  return ptpip_basic_cmd( conn, &cmd_terminate_capture );
+}
+
