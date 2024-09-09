@@ -1,6 +1,11 @@
 APP = demo
-SRCS = api.c blob.c tests.c
+SRCS = $(wildcard *.c)
+HEADERS = $(wildcard *.h)
 OBJS = api.obj
 
-demo : ${SRCS}
+demo : ${SRCS} ${HEADERS}
 	cc ${SRCS} -o ${APP}
+	./demo
+
+watch: 
+	node watcher -v

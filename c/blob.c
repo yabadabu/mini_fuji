@@ -17,7 +17,10 @@ typedef struct {
 } connection_t;
 
 int blob_create( blob_t* blob, uint32_t num_bytes ) {
-  blob->data = malloc( num_bytes );
+  if( num_bytes > 0 )
+    blob->data = malloc( num_bytes );
+  else
+    blob->data = NULL;
   blob->count = num_bytes;
   blob->reserved = num_bytes;
   return 0;
@@ -28,6 +31,8 @@ int blob_resize( blob_t* blob, uint32_t new_size ) {
     blob->count = new_size;
     return 0;
   }
+  if( !blob->reserved )
+    blob->reserved = 16;
   while( blob->reserved < new_size )
     blob->reserved *= 2;
   blob->data = realloc( blob->data, blob->reserved );
@@ -49,21 +54,42 @@ int blob_destroy( blob_t* blob ) {
   return 0;
 }
 
-void blob_append( blob_t* blob, const blob_t* other ) {
-  int32_t prev_sz = blob->count;
-  int32_t new_sz = blob->count + other->count;
-  blob_resize( blob, new_sz );
-  memcpy( blob->data + prev_sz, other->data, other->count );
+uint32_t blob_size( const blob_t *blob ) {
+  return blob->count;
 }
 
-void blob_write_u16( blob_t* blob, uint32_t offset, uint16_t value ) {
+void blob_append_blob( blob_t* blob, const blob_t* other ) {
+  blob_append_data( blob, other->data, other->count );
+}
+
+void blob_append_data( blob_t* blob, const void* new_data, uint32_t data_size ) {
+  int32_t prev_sz = blob->count;
+  int32_t new_sz = blob->count + data_size;
+  blob_resize( blob, new_sz );
+  memcpy( blob->data + prev_sz, new_data, data_size );
+}
+
+void blob_remove_from_start( blob_t* blob, uint32_t num_bytes, blob_t* out_blob ) {
+  assert( blob->count >= num_bytes );
+  // I have 32. Remove 20 -> remain 12
+  uint32_t remaining_bytes = blob->count - num_bytes;
+  blob->count = remaining_bytes;
+  if( out_blob ) {
+    blob_resize( out_blob, num_bytes );
+    memcpy( out_blob->data, blob->data, num_bytes );
+  }
+  if( remaining_bytes )
+    memmove( blob->data, blob->data + num_bytes, remaining_bytes );
+}
+
+void blob_write_u16le( blob_t* blob, uint32_t offset, uint16_t value ) {
   assert( offset + 2 <= blob->count );
   uint8_t* p = blob->data + offset;
   *p++ = (value & 0x00FF) >>  0;
   *p++ = (value & 0xFF00) >>  8;
 }
 
-void blob_write_u32( blob_t* blob, uint32_t offset, uint32_t value ) {
+void blob_write_u32le( blob_t* blob, uint32_t offset, uint32_t value ) {
   assert( offset + 4 <= blob->count );
   uint8_t* p = blob->data + offset;
   *p++ = (value & 0x000000FF) >>  0;
@@ -72,22 +98,22 @@ void blob_write_u32( blob_t* blob, uint32_t offset, uint32_t value ) {
   *p++ = (value & 0xFF000000) >> 24;
 }
 
-uint16_t blob_read_u16( blob_t* blob, uint32_t offset ) {
+uint16_t blob_read_u16le( const blob_t* blob, uint32_t offset ) {
   assert( offset + 2 <= blob->count );
   uint8_t* p = blob->data + offset;
   return (p[0] << 0)
-     ||  (p[1] << 8)
-     ;
-}
+       | (p[1] << 8)
+       ;
+   }
 
-uint32_t blob_read_u32( blob_t* blob, uint32_t offset ) {
+uint32_t blob_read_u32le( const blob_t* blob, uint32_t offset ) {
   assert( offset + 4 <= blob->count );
   uint8_t* p = blob->data + offset;
   return (p[0] << 0)
-     ||  (p[1] << 8)
-     ||  (p[2] << 16)
-     ||  (p[3] << 24)
-     ;
+       | (p[1] << 8)
+       | (p[2] << 16)
+       | (p[3] << 24)
+       ;
 }
 
 bool blob_is_valid( const blob_t* blob ) {
@@ -95,7 +121,6 @@ bool blob_is_valid( const blob_t* blob ) {
 }
 
 void blob_dump( const blob_t* blob ) {
-  assert( blob_is_valid( blob ) );
   for( int i=0; i<blob->count; ++i ) {
     printf( "%02x ", blob->data[i] );
     if( (i+1) % 16 == 0)
