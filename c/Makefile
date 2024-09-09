@@ -1,6 +1,6 @@
 APP = demo
-SRCS = api.c
+SRCS = api.c blob.c tests.c
 OBJS = api.obj
 
 demo : ${SRCS}
-	cc api.c -o ${APP}
+	cc ${SRCS} -o ${APP}

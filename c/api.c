@@ -1,9 +1,7 @@
 #include <stdint.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
-#include <string.h>
+#include "blob.h"
 
 typedef struct { int32_t value; } handle_t;
 typedef struct { int32_t value; } storage_id_t;
@@ -14,67 +12,8 @@ typedef struct {
 } array_handles_t;
 
 typedef struct {
-  int32_t  count;
-  int32_t  reserved;
-  uint8_t* data;
-} blob_t;
-
-typedef struct {
   // ...
 } connection_t;
-
-int blob_create( blob_t* blob, int num_bytes ) {
-  blob->data = malloc( num_bytes );
-  blob->count = num_bytes;
-  blob->reserved = num_bytes;
-  return 0;
-}
-
-int blob_resize( blob_t* blob, int new_size ) {
-  if( new_size <= blob->reserved ) {
-    blob->count = new_size;
-    return 0;
-  }
-  while( blob->reserved < new_size )
-    blob->reserved *= 2;
-  blob->data = realloc( blob->data, blob->reserved );
-  blob->count = new_size;
-  return 0;
-}
-
-int blob_clear( blob_t* blob ) {
-  blob->count = 0;
-  return 0;
-}
-
-int blob_destroy( blob_t* blob ) {
-  if( blob->data )
-    free( blob->data );
-  blob->data = NULL;
-  blob->reserved = 0;
-  blob->count = 0;
-  return 0;
-}
-
-int blob_append( blob_t* blob, const blob_t* other ) {
-  int32_t prev_sz = blob->count;
-  int32_t new_sz = blob->count + other->count;
-  blob_resize( blob, new_sz );
-  memcpy( blob->data + prev_sz, other->data, other->count );
-  return 0;
-}
-
-int blob_write_u16( blob_t* blob, int offset, uint16_t value ) {
-  assert( offset + value <= blob->count );
-  // ...
-  return 0;
-}
-
-int blob_write_u32( blob_t* blob, int offset, uint32_t value ) {
-  assert( offset + value <= blob->count );
-  // ...
-  return 0;
-}
 
 int blob_msg( blob_t* blob, int16_t id, const uint8_t* payload, size_t payload_size, const uint16_t* msg_type, const uint32_t* counter ) {
 
@@ -109,7 +48,10 @@ int ptpip_get_storage_ids( array_handles_t* out_handles ) {
   return 0;
 }
 
+bool run_tests();
+
 bool run() {
+
   array_handles_t handles;
   if( ptpip_get_storage_ids( &handles ) )
     return false;
@@ -119,6 +61,8 @@ bool run() {
 }
 
 int main( int argc, char** argv ) {
+  if( !run_tests() )
+    return -1;
   if( !run() )
     return -1;
   printf( "OK\n");
