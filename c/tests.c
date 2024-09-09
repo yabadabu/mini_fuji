@@ -68,7 +68,7 @@ void blob_from( blob_t* b, const char* hex_data ) {
   blob_create( b, nbytes );
 
   p = hex_data;
-  char* op = b->data;
+  uint8_t* op = b->data;
   n = 0;
   uint8_t v = 0;
   while( *p ) {

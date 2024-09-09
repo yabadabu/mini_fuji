@@ -102,6 +102,7 @@ int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output
   conn->curr_cmd = cmd;
 
   // Wait answer
+  return 0;
 }
 
 void conn_update( conn_t* conn ) {
