@@ -25,15 +25,6 @@ void conn_update( conn_t* );
 void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd_id );
 
 // ---------------------------------------
-typedef struct {
-  uint32_t size;
-  uint16_t type;
-  uint16_t id;
-  uint32_t counter;
-  uint8_t  payload[];
-} packet_t;
-
-// ---------------------------------------
 enum eValueType {
   PDT_UNKNOWN = 0, 
   PDT_U16, 

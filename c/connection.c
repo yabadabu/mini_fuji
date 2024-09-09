@@ -11,6 +11,7 @@ cmd_t cmd_initiate_open_capture  = { .id = 0x101c, .name = "initiate_open_captur
 cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
 cmd_t cmd_del_obj           = { .id = 0x100b, .name = "del_obj" };
 
+
 // ------------------------------------------------------
 int parse_get_prop( const blob_t* args, void* output ) {
   prop_t* prop = (prop_t*) output;
@@ -58,6 +59,25 @@ cmd_t cmd_get_storage_ids = {
   .id = 0x1004, 
   .name = "get_storage_ids", 
   .parse = &parse_get_storage_ids 
+};
+
+// ------------------------------------------------------
+int parse_get_obj_handles( const blob_t* args, void* output ) {
+  handles_t* out_ids = (handles_t*) output;
+  out_ids->count = blob_read_u32le( args, 0 );
+  if( out_ids->count > 3 )
+    out_ids->count = 3;
+  for( uint32_t i=0; i<out_ids->count; ++i ) {
+    uint32_t id = blob_read_u32le( args, 4 + i * 4 );
+    out_ids->handles[i].value = id;
+  }
+  return 0; 
+}
+
+cmd_t cmd_get_obj_handles = { 
+  .id = 0x1007, 
+  .name = "get_obj_handles", 
+  .parse = &parse_get_obj_handles
 };
 
 // ------------------------------------------------------
@@ -250,5 +270,24 @@ int ptpip_terminate_capture( conn_t* conn ) {
 
 int ptpip_del_obj( conn_t* conn, handle_t handle ) {
   return ptpip_basic_cmd_u32( conn, &cmd_del_obj, handle.value, NULL );
+}
+
+int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out_handles) {
+  assert( out_handles );
+  blob_t msg;
+  blob_create( &msg, 0 );
+
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  create_cmd_msg( &msg, &cmd_get_obj_handles, msg_type_cmd, msg_seq_id, 12 );
+  blob_write_u32le( &msg, offset_payload + 0, storage_id.storage_id );
+  blob_write_u32le( &msg, offset_payload + 4, 0 );
+  blob_write_u32le( &msg, offset_payload + 8, 0xffffffff );
+
+  conn_transaction( conn, &msg, &cmd_get_obj_handles, out_handles );
+  return 0;
+}
+
+int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, void (*opt_progress)( float ) ) {
+  return 0;
 }
 
