@@ -158,6 +158,42 @@ bool test_del_obj(conn_t* c) {
   return true;
 }
 
+static void callback_progress( void* context, float progress ) {
+  printf( "On callback_progress %f (Ctx:%p)\n", progress, context );
+  assert( context );
+  int* counter = (int*) context;
+  *counter += 1;
+}
+
+bool test_get_obj(conn_t* c) {
+  printf( "test_get_obj\n" );
+  handle_t h = { .value = 0x88224411 };
+  blob_t output;
+  blob_create( &output, 0 );
+
+  int called = 0;
+  callback_context_t my_context = { .context = &called, .progress = &callback_progress };
+  ptpip_get_obj( c, h, &output, my_context );
+
+  blob_t ans;
+  blob_from( &ans, "14000000 0200 1510 05000000 01002233");
+  blob_dump( &ans );
+  conn_add_data( c, ans.data, ans.count );
+  conn_update( c );
+
+  blob_t ans2;
+  blob_from( &ans2, "88998877");
+  conn_add_data( c, ans2.data, ans2.count );
+
+  conn_update( c );
+  assert( output.count == 8 );
+  blob_dump( &output );
+  assert( output.data[0] == 0x01 );
+  assert( output.data[4] == 0x88 );
+  assert( called > 0 );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -193,6 +229,9 @@ bool test_conn() {
     return false;
 
   if( !test_del_obj(c) )
+    return false;
+
+  if( !test_get_obj(c) )
     return false;
 
   // blob_t msg_open_session;

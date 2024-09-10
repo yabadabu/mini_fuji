@@ -11,7 +11,6 @@ cmd_t cmd_initiate_open_capture  = { .id = 0x101c, .name = "initiate_open_captur
 cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
 cmd_t cmd_del_obj           = { .id = 0x100b, .name = "del_obj" };
 
-
 // ------------------------------------------------------
 int parse_get_prop( const blob_t* args, void* output ) {
   prop_t* prop = (prop_t*) output;
@@ -81,6 +80,21 @@ cmd_t cmd_get_obj_handles = {
 };
 
 // ------------------------------------------------------
+int parse_get_obj( const blob_t* args, void* output ) {
+  blob_t* b = (blob_t*) output;
+  assert( b );
+  blob_reserve( b, args->count );
+  blob_append_data( b, args->data, args->count );
+  return 0; 
+}
+
+cmd_t cmd_get_obj = { 
+  .id = 0x1009, 
+  .name = "get_obj", 
+  .parse = &parse_get_obj
+};
+
+// ------------------------------------------------------
 const uint16_t msg_type_cmd  = 0x0001;
 const uint16_t msg_type_data = 0x0002;
 const uint16_t msg_type_end  = 0x0003;
@@ -109,6 +123,9 @@ bool conn_create( conn_t* conn ) {
   conn->sequence_id = 1;
   conn->curr_output = NULL;
   conn->curr_cmd = NULL;
+
+  callback_context_t empty_context = { .context = NULL, .progress = NULL };
+  conn->curr_callback_context = empty_context;
   return true;
 }
 
@@ -126,6 +143,10 @@ uint32_t conn_next_msg_sequence( conn_t* conn) {
 void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
   printf( "Recv    %4d bytes\n", data_size );
   blob_append_data( &conn->recv_data, new_data, data_size );
+  if( conn->curr_callback_context.progress ) {
+    printf( "Recv data and we have a context!!\n");
+    (*conn->curr_callback_context.progress)( conn->curr_callback_context.context, 0.2 );
+  }
 }
 
 void conn_send( conn_t* conn, const blob_t* data ) {
@@ -163,6 +184,9 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
     conn->curr_cmd->parse( &args, conn->curr_output );
   } 
 
+  // Clear callback progress
+  conn->curr_callback_context.context = NULL;
+  conn->curr_callback_context.progress = NULL;
 }
 
 int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output_data) {
@@ -270,6 +294,7 @@ int ptpip_terminate_capture( conn_t* conn ) {
 }
 
 int ptpip_del_obj( conn_t* conn, handle_t handle ) {
+  // No output parameter expected
   return ptpip_basic_cmd_u32( conn, &cmd_del_obj, handle.value, NULL );
 }
 
@@ -285,7 +310,12 @@ int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out
   return 0;
 }
 
-int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, void (*opt_progress)( float ) ) {
-  return 0;
+int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_context_t ctx ) {
+  assert( out_obj && conn && handle.value );
+  conn->curr_callback_context = ctx;
+  
+  int rc = ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
+
+  return rc;
 }
 
