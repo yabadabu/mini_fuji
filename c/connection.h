@@ -14,6 +14,7 @@ typedef struct {
   blob_t   recv_data;
   blob_t   curr_packet;
   blob_t   last_answer;
+  blob_t   otf_msg;
   uint32_t sequence_id;
   cmd_t*   curr_cmd;
   void*    curr_output;

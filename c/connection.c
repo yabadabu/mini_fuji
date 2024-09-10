@@ -94,13 +94,18 @@ uint32_t conn_next_sequence( conn_t* );
 void conn_send( conn_t*, const blob_t* blob );
 
 bool conn_create( conn_t* conn ) {
+
   blob_create( &conn->recv_data, 0 );
   blob_reserve( &conn->recv_data, 256 );
-  blob_dump( &conn->recv_data );
+
   blob_create( &conn->curr_packet, 0 );
   blob_reserve( &conn->curr_packet, 256 );
+
   blob_create( &conn->last_answer, 0 );
   blob_reserve( &conn->last_answer, 256 );
+
+  blob_create( &conn->otf_msg, 0 );
+  blob_reserve( &conn->otf_msg, 256 );
   conn->sequence_id = 1;
   conn->curr_output = NULL;
   conn->curr_cmd = NULL;
@@ -201,18 +206,16 @@ void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint3
 }
 
 int ptpip_basic_cmd( conn_t* conn, cmd_t* cmd ) {
-  blob_t msg;
-  blob_create( &msg, 0 );
-  conn_create_cmd_msg( conn, &msg, cmd );
-  conn_transaction( conn, &msg, cmd, NULL );
+  blob_t* msg = &conn->otf_msg;
+  conn_create_cmd_msg( conn, msg, cmd );
+  conn_transaction( conn, msg, cmd, NULL );
   return 0;
 }
 
 int ptpip_basic_cmd_u32( conn_t* conn, cmd_t* cmd, uint32_t payload_int, void* output ) {
-  blob_t msg;
-  blob_create( &msg, 0 );
-  conn_create_cmd_msg_u32( conn, &msg, cmd, payload_int );
-  conn_transaction( conn, &msg, cmd, output );
+  blob_t* msg = &conn->otf_msg;
+  conn_create_cmd_msg_u32( conn, msg, cmd, payload_int );
+  conn_transaction( conn, msg, cmd, output );
   return 0;
 }
 
@@ -226,20 +229,19 @@ int ptpip_close_session( conn_t* conn ) {
 }
 
 int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
-  assert( prop );
-  blob_t msg;
-  blob_create( &msg, 0 );
-  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  assert( prop && conn );
   cmd_t* cmd = &cmd_set_prop;
+  blob_t* msg = &conn->otf_msg;
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
   
-  create_cmd_msg( &msg, cmd, msg_type_cmd, msg_seq_id, 4 );
-  blob_write_u32le( &msg, offset_payload, (prop->id & 0xffff) );
-  conn_send( conn, &msg );
+  create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 4 );
+  blob_write_u32le( msg, offset_payload, (prop->id & 0xffff) );
+  conn_send( conn, msg );
 
-  create_cmd_msg( &msg, cmd, msg_type_data, msg_seq_id, 2 );
-  blob_write_u16le( &msg, offset_payload, prop->val16 );
+  create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 2 );
+  blob_write_u16le( msg, offset_payload, prop->val16 );
 
-  conn_transaction( conn, &msg, cmd, prop );
+  conn_transaction( conn, msg, cmd, prop );
   return 0;
 }
 
@@ -248,11 +250,10 @@ int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
 }
 
 int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
-  assert( storage_ids );
-  blob_t msg;
-  blob_create( &msg, 0 );
-  conn_create_cmd_msg( conn, &msg, &cmd_get_storage_ids );
-  conn_transaction( conn, &msg, &cmd_get_storage_ids, storage_ids );
+  assert( storage_ids && conn );
+  blob_t* msg = &conn->otf_msg;
+  conn_create_cmd_msg( conn, msg, &cmd_get_storage_ids );
+  conn_transaction( conn, msg, &cmd_get_storage_ids, storage_ids );
   return 0;
 }
 
@@ -273,17 +274,14 @@ int ptpip_del_obj( conn_t* conn, handle_t handle ) {
 }
 
 int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out_handles) {
-  assert( out_handles );
-  blob_t msg;
-  blob_create( &msg, 0 );
-
+  assert( out_handles && conn );
+  blob_t* msg = &conn->otf_msg;
   uint32_t msg_seq_id = conn_next_msg_sequence( conn );
-  create_cmd_msg( &msg, &cmd_get_obj_handles, msg_type_cmd, msg_seq_id, 12 );
-  blob_write_u32le( &msg, offset_payload + 0, storage_id.storage_id );
-  blob_write_u32le( &msg, offset_payload + 4, 0 );
-  blob_write_u32le( &msg, offset_payload + 8, 0xffffffff );
-
-  conn_transaction( conn, &msg, &cmd_get_obj_handles, out_handles );
+  create_cmd_msg( msg, &cmd_get_obj_handles, msg_type_cmd, msg_seq_id, 12 );
+  blob_write_u32le( msg, offset_payload + 0, storage_id.storage_id );
+  blob_write_u32le( msg, offset_payload + 4, 0 );
+  blob_write_u32le( msg, offset_payload + 8, 0xffffffff );
+  conn_transaction( conn, msg, &cmd_get_obj_handles, out_handles );
   return 0;
 }
 
