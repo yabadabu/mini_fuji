@@ -9,7 +9,12 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/select.h>
+#include <sys/types.h>
+#include <sys/uio.h>
 #include <arpa/inet.h>  // for inet_addr(), struct sockaddr_in
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "channel.h"
 
@@ -73,7 +78,7 @@ static void ch_clean( channel_t* ch ) {
   ch->port = 0;
 }
 
-int ch_create( channel_t* ch, const char* conn_info ) {
+bool ch_create( channel_t* ch, const char* conn_info ) {
   assert( ch );
   assert( conn_info );
 
@@ -84,13 +89,14 @@ int ch_create( channel_t* ch, const char* conn_info ) {
   const char* str_port = strchr( str_ip, ':' );
   if( !str_port ) {
     printf( "Failed to identify port number\n");
-    return -2;
+    return false;
   }
 
   char ip[32];
   memset( ip, 0x00, sizeof(ip));
   strncpy( ip, str_ip, str_port - str_ip );
-  int port = atoi( str_port + 1 );
+  str_port += 1;
+  int port = atoi( str_port );
   printf( "IP: %s\n", ip );
   printf( "Port: %d\n", port );
 
@@ -101,7 +107,7 @@ int ch_create( channel_t* ch, const char* conn_info ) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
       perror("socket");
-      return -3;
+      return false;
     }
 
     // Enable the broadcast option
@@ -109,9 +115,9 @@ int ch_create( channel_t* ch, const char* conn_info ) {
     if( is_broadcast ) {
       int broadcast_permission = 1;
       if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_permission, sizeof(broadcast_permission)) < 0) {
-          perror("setsockopt (SO_BROADCAST)");
-          close(sockfd);
-          return -10;
+        perror("setsockopt (SO_BROADCAST)");
+        close(sockfd);
+        return false;
       }
 
       struct sockaddr_in broadcast_addr;    
@@ -119,21 +125,66 @@ int ch_create( channel_t* ch, const char* conn_info ) {
       broadcast_addr.sin_family = AF_INET;
       broadcast_addr.sin_port = htons(port);
       if (inet_pton(AF_INET, ip, &broadcast_addr.sin_addr) <= 0) {
-          perror("inet_pton");
-          close(sockfd);
-          return -11;
+        perror("inet_pton");
+        close(sockfd);
+        return false;
       }
     }
 
   }
+  else if( strncmp( conn_info, "tcp_server:", 11 ) == 0 ) {
+    ch->is_server = true;
 
+    struct addrinfo hints, *servinfo, *p;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;    // No effect if bindaddr != NULL
+
+    if (getaddrinfo(ip, str_port, &hints, &servinfo) != 0) {
+      perror( "getaddrinfo" );
+      return false;
+    }
+
+    for ( p = servinfo; p != NULL; p = p->ai_next) {
+
+      if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+        continue;
+
+      // Step 2: Set SO_REUSEADDR option
+      int optval = 1;
+      if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+        perror("setsockopt");
+        close(sockfd);
+        continue;
+      }
+
+      if (bind(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
+        perror( "bind failed");
+        close(sockfd);
+        continue;
+      }
+      
+      if (listen(sockfd, 5) < 0) {
+        perror( "listen failed" );
+        close(sockfd);
+        continue;
+      }
+
+      break;
+    }
+
+    freeaddrinfo(servinfo);
+    if (!p)
+      return false;
+
+  }
   else if( strncmp( conn_info, "tcp", 3 ) == 0 ) {
-    ch->is_server = conn_info[3] == '_';  // tcp_server
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
       perror("socket");
-      return -3;
+      return false;
     }
 
     // Step 3: Configure the server address
@@ -146,47 +197,32 @@ int ch_create( channel_t* ch, const char* conn_info ) {
     if (inet_pton(AF_INET, ip, &remote_addr.sin_addr) <= 0) {
         perror("inet_pton");
         close(sockfd);
-        return -4;
+        return false;
     }
 
-    if( ch->is_server ) {
-
-      if (bind(sockfd, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
-        perror("bind");
-        return -7;
-      }
-
-      if (listen(sockfd, 5) < 0) {
-        perror("listen");
-        return -7;
-      }
-
-    } else {
-
-      if (connect(sockfd, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
-        if (errno != EINPROGRESS) {
-          // EINPROGRESS indicates that the connection is in progress in non-blocking mode
-          perror("connect");
-          close(sockfd);
-          return -5;
-        } else {
-          printf("Connecting...\n");
-        }
+    if (connect(sockfd, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
+      if (errno != EINPROGRESS) {
+        // EINPROGRESS indicates that the connection is in progress in non-blocking mode
+        perror("connect");
+        close(sockfd);
+        return false;
       } else {
-          // The connection was successful. (in blocking situations)
+        printf("Connecting...\n");
       }
-    }
-
-    if (set_non_blocking_socket(sockfd) < 0) {
-      close(sockfd);
-      return -6;
     }
 
   }
 
+  if( !ch->is_udp ) {
+    if (set_non_blocking_socket(sockfd) < 0) {
+      close(sockfd);
+      return false;
+    }
+  }
+
   ch->port = port;
   ch->fd = sockfd;
-  return 0;
+  return true;
 }
 
 int ch_read( channel_t* ch, uint8_t *out_buffer, uint32_t max_length ) {
@@ -274,11 +310,13 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   FD_SET(server->fd, &fds);
 
   struct timeval tv = {usecs / 1000000, usecs % 1000000};
-  printf( "Waiting for accept: %d:%d\n", tv.tv_sec, tv.tv_usec);
+  printf( "Waiting for accept: %ld:%d\n", tv.tv_sec, tv.tv_usec);
 
-  int ret = select(server->fd + 1, &fds, NULL, NULL, 0 ) ; //&tv);
+  int ret = select(server->fd + 1, &fds, NULL, NULL, &tv);
+  printf( "Select rc:%d\n", ret );
   if (ret < 0) {
     perror("select");
+    printf( "Select failed\n" );
     return false;
   }
 
@@ -290,8 +328,10 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   struct sockaddr_storage sa;
   socklen_t sa_sz = sizeof(sa);
   int new_fd = accept( server->fd, (struct sockaddr*)&sa, (socklen_t*) &sa_sz );
-  if( new_fd < 0 )
+  if( new_fd < 0 ) {
+    printf( "Accept failed\n" );
     return false;
+  }
 
   set_non_blocking_socket( new_fd );
 

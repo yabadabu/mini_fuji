@@ -282,6 +282,25 @@ bool test_conn() {
   return true;
 }
 
+bool test_channel_accept() {
+
+  channel_t ch_server;
+  if( !ch_create( &ch_server, "tcp_server:127.0.0.1:40000"))
+    return false;
+
+  while( true ) {
+    channel_t ch_client;
+    if( ch_accept( &ch_server, &ch_client, 5 * 1000000 ) ) {
+      printf( "New connectiong accepted!\n" );
+      break;
+    }
+  }
+
+  ch_close( &ch_server );
+  return true;
+}
+
+
 bool test_channels() {
   printf( "Testing channels...\n");
 
@@ -289,7 +308,7 @@ bool test_channels() {
   blob_create( &buff, 0, 1024 );
 
   channel_t ch_udp;
-  if( ch_create( &ch_udp, "udp:255.255.255.255:5002"))
+  if( !ch_create( &ch_udp, "udp:255.255.255.255:5002") )
     return false;
 
   const char* my_ip = "192.168.1.136";
@@ -302,38 +321,41 @@ bool test_channels() {
   blob_append_data( &discovery_msg, suffix, strlen( suffix ) );
 
   channel_t ch_discovery;
-  if( ch_create( &ch_discovery, "tcp_server:0.0.0.0:51560"))
+  if( !ch_create( &ch_discovery, "tcp_server:0.0.0.0:51560") )
     return false;
+  assert( ch_discovery.port = 51560 );
   printf( "TCP.Server listening at port %d\n", ch_discovery.port );
 
+  channel_t ch_client;
   while( true ) {
     int brc = ch_broadcast( &ch_udp, discovery_msg.data, discovery_msg.count );
-    printf( "Broadcasted msg : %d\n", brc );
-    channel_t ch_client;
-    if( ch_accept( &ch_discovery, &ch_client, 1000000 ) ) {
+    printf( "Broadcasted msg\n" );
+
+    if( ch_accept( &ch_discovery, &ch_client, 5000000 ) ) {
       printf( "New connectiong accepted!\n" );
       while( true ) {
         int bytes_read = ch_read( &ch_client, buff.data, buff.reserved );
         if( bytes_read > 0 ) {
           buff.count = bytes_read;
+          buff.data[ buff.count ] = 0x00;
+          printf( "Recv:\n%s\n", (char*)buff.data );
           blob_dump( &buff );
           break;
         }
       }
       break;
     }
-
-    ch_wait( 1000000 );
   }
 
   ch_close( &ch_udp );
   ch_close( &ch_discovery );
+  ch_close( &ch_client );
 
 return false;
 
   channel_t ch;
   channel_t* c = &ch;
-  if( ch_create( c, "tcp:127.0.0.1:5001") )
+  if( !ch_create( c, "tcp:127.0.0.1:5001") )
     return false;
   int bytes_written = ch_write( c, "JOHN", 4);
   assert( bytes_written == 4 );
