@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>
+#include <stdio.h>      // printf
 #include <stdlib.h>
 
 #include <errno.h>
@@ -96,7 +96,8 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
   const char* str_ip = strchr( conn_info, ':' ) + 1;
   const char* str_port = strchr( str_ip, ':' );
   if( !str_port ) {
-    printf( "Failed to identify port number\n");
+    errno = ECANCELED;
+    perror( "Failed to identify port number in conn_info");
     return false;
   }
 
@@ -215,7 +216,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
         return false;
 
       } else {
-        printf("Connecting...\n");
+        //printf("Connecting...\n");
       }
     }
 

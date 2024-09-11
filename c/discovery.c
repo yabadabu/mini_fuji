@@ -1,5 +1,5 @@
 #include <string.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdlib.h>     // atoi
 #include <assert.h>
 #include "discovery.h"
@@ -30,7 +30,7 @@ bool discovery_start( const char* local_ip ) {
   if( !ch_create( &ds.ch_udp, "udp:255.255.255.255:5002") )
     return false;
 
-  // Msg to the cameras my identify
+  // Msg to the cameras my identify. prefix + ip + suffix
   const char* prefix = "DISCOVERY * HTTP/1.1\r\nHOST: ";
   const char* suffix = "\r\nMX: 5\r\nSERVICE: PCSS/1.0\r\n";
   blob_t* msg = &ds.discovery_msg;
