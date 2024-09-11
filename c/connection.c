@@ -131,8 +131,10 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
       conn->curr_cmd->parse( &args, conn->curr_output );
 
     // The command is over?
-    if( msg_type == msg_type_end )
+    if( msg_type == msg_type_end ) {
+      int rc = cmd_id;
       conn_clear_state( conn );
+    }
 
     // We will not receive a 'end' for the initialization command
     else if( msg_type == msg_type_data && cmd_id == cmd_initialize_comm.id )
@@ -294,5 +296,31 @@ int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_prog
   conn->on_progress = on_progress;
   int rc = ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
   return rc;
+}
+
+const char* ptpip_error_msg( int rc ) {
+  switch( rc ) {
+  case 0x2000: return "Undefined";
+  case 0x2001: return "OK";
+  case 0x2002: return "GeneralError";
+  case 0x2003: return "SessionNotOpen";
+  case 0x2004: return "InvalidTransactionID";
+  case 0x2005: return "OperationNotSupported";
+  case 0x2006: return "ParameterNotSupported";
+  case 0x2007: return "IncompleteTransfer";
+  case 0x2008: return "InvalidStorageId";
+  case 0x2009: return "InvalidObjectHandle";
+  case 0x200a: return "DevicePropNotSupported";
+  case 0x200b: return "InvalidObjectFormatCode";
+  case 0x2010: return "NoThumbnailPresent";
+  case 0x2015: return "NoValidObjectInfo";
+  case 0x2018: return "CaptureAlreadyTerminated";
+  case 0x2019: return "DeviceBusy";
+  case 0x201b: return "InvalidDevicePropFormat";
+  case 0x201c: return "InvalidDevicePropValue";
+  case 0x201d: return "InvalidParameter";
+  case 0x201e: return "SessionAlreadyOpened";
+  }
+  return "Unknown return code";
 }
 

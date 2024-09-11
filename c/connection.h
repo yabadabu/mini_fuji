@@ -82,6 +82,7 @@ int ptpip_initiate_open_capture( conn_t* );
 int ptpip_terminate_capture( conn_t* );
 int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, callback_progress_t on_progress );
 int ptpip_del_obj( conn_t*, handle_t handle );
+const char* ptpip_error_msg( int rc );
 
 // ---------------------------------------
 extern prop_t prop_quality;
