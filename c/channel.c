@@ -85,23 +85,28 @@ void ch_close( channel_t* ch ) {
   ch->fd = -1;
 }
 
+static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port ) {
+  memset(addr, 0, sizeof(struct sockaddr_in));
+  addr->sin_family = AF_INET;
+  addr->sin_port = htons( port );
+  if (inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
+      perror("inet_pton");
+      return false;
+  }
+  return true;
+}
+
 int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   assert( ch->is_udp );
 
-  struct sockaddr_in broadcast_addr;
-  memset(&broadcast_addr, 0, sizeof(broadcast_addr));
-  broadcast_addr.sin_family = AF_INET;
-  broadcast_addr.sin_port = htons( ch->port );
-  
-  // Convert the broadcast IP address string to binary format
-  if (inet_pton(AF_INET, broadcast_ip, &broadcast_addr.sin_addr) <= 0) {
-      perror("inet_pton");
+  struct sockaddr_in addr;
+  if( !ch_make_address( &addr, broadcast_ip, ch->port ) ) {
       ch_close( ch );
       return -1;
   }
 
   // Do the actual broadcast
-  int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&broadcast_addr, sizeof(broadcast_addr));
+  int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
   if( rc < 0) {
       perror("sendto");
       ch_close( ch );
@@ -165,15 +170,6 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
         return false;
       }
 
-      struct sockaddr_in broadcast_addr;    
-      memset(&broadcast_addr, 0, sizeof(broadcast_addr));
-      broadcast_addr.sin_family = AF_INET;
-      broadcast_addr.sin_port = htons(port);
-      if (inet_pton(AF_INET, ip, &broadcast_addr.sin_addr) <= 0) {
-        perror("inet_pton");
-        close(sockfd);
-        return false;
-      }
     }
 
   }
@@ -233,15 +229,9 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
     }
 
     struct sockaddr_in remote_addr;
-    memset(&remote_addr, 0, sizeof(remote_addr));
-    remote_addr.sin_family = AF_INET;
-    remote_addr.sin_port = htons(port);  // Connect to port 8080 (adjust as needed)
-    
-    // Convert and set the remote server IP address (e.g., "192.168.1.1")
-    if (inet_pton(AF_INET, ip, &remote_addr.sin_addr) <= 0) {
-        perror("inet_pton");
-        close(sockfd);
-        return false;
+    if( !ch_make_address( &remote_addr, ip, port )) {
+      close(sockfd);
+      return false;
     }
 
     if (connect(sockfd, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
@@ -382,3 +372,87 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   return true;
 }
 
+
+
+
+/*
+
+get local ip in windows
+
+
+#include <winsock2.h>
+#include <iphlpapi.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+int main() {
+    ULONG outBufLen = 15000;
+    PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES *)malloc(outBufLen);
+    if (pAddresses == NULL) {
+        printf("Memory allocation failed\n");
+        return 1;
+    }
+
+    DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
+    if (dwRetVal == NO_ERROR) {
+        PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
+        while (pCurrAddresses) {
+            printf("Adapter name: %s\n", pCurrAddresses->AdapterName);
+            PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
+            while (pUnicast != NULL) {
+                SOCKADDR *sa = pUnicast->Address.lpSockaddr;
+                if (sa->sa_family == AF_INET) {
+                    char str[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), str, INET_ADDRSTRLEN);
+                    printf("IPv4 Address: %s\n", str);
+                }
+                pUnicast = pUnicast->Next;
+            }
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    } else {
+        printf("GetAdaptersAddresses failed with error: %lu\n", dwRetVal);
+    }
+
+    free(pAddresses);
+    return 0;
+}
+
+get local ip in unix
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+int main() {
+    struct ifaddrs *ifaddr, *ifa;
+    char host[NI_MAXHOST];
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        exit(EXIT_FAILURE);
+    }
+
+    // Loop through the list of interfaces
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) continue;
+
+        if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
+            if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+                printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, host);
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return 0;
+}
+
+
+*/
