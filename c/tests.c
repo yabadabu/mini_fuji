@@ -76,7 +76,7 @@ void send_end_of_packet( conn_t* c ) {
   blob_create( &eoc, 0, 256 );
   blob_from_hex_string( &eoc, 0, "0c000000 0300 1210 05000000" );
   conn_add_data( c, eoc.data, eoc.count );
-  conn_update( c );
+  conn_update( c, 1 );
   assert( !conn_is_waiting_answer( c ) );
 }
 
@@ -94,7 +94,7 @@ bool test_get_storage(conn_t* c) {
   blob_from_hex_string( &ans, 0, "18000000 0200 0210 05000000 020000000100001002000010");
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
-  conn_update( c );
+  conn_update( c, 1 );
 
   send_end_of_packet( c );
 
@@ -115,7 +115,7 @@ bool test_get_prop(conn_t* c) {
   blob_from_hex_string( &ans, 0, "0e000000 0200 1510 05000000 0100");
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
-  conn_update( c );
+  conn_update( c, 1 );
 
   send_end_of_packet( c );
 
@@ -191,14 +191,14 @@ bool test_get_obj(conn_t* c) {
   blob_from_hex_string( &ans, 0, "14000000 0200 1510 05000000 01002233");
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
-  conn_update( c );
+  conn_update( c, 1 );
 
   blob_t ans2;
   blob_create( &ans2, 0, 256 );
   blob_from_hex_string( &ans2, 0, "88998877");
   conn_add_data( c, ans2.data, ans2.count );
 
-  conn_update( c );
+  conn_update( c, 1 );
   assert( output.count == 8 );
   blob_dump( &output );
 
@@ -235,7 +235,7 @@ bool test_initialize( conn_t* c ) {
   blob_create( &bans, 0, 256 );
   blob_from_hex_string( &bans, 0, ans );
   conn_add_data( c, bans.data, bans.count );
-  conn_update( c );
+  conn_update( c, 1 );
   assert( !conn_is_waiting_answer( c ) );
 
   return true;
@@ -247,7 +247,7 @@ bool test_conn() {
   conn_t* c = &conn;
   conn_create( c );
   printf( "Conn created\n");
-  conn_update( c );
+  conn_update( c, 1 );
   printf( "update complete\n");
   
   if( !test_initialize( c ))
@@ -310,7 +310,6 @@ void show_waiting_answer() {
   printf( "\rWaiting answer from the camera... %c ", tc[idx] );
   fflush( stdout );
   idx = ( idx + 1 ) % 4;
-  ch_wait( 1000000 ); 
 }
 
 bool test_channels() {
@@ -332,9 +331,6 @@ bool test_channels() {
     return false;
   printf( "Connected\n" );
 
-  blob_t net_buffer;
-  blob_create( &net_buffer, 0, 32 * 1024 );
-
   conn_t conn;
   conn_t* c = &conn;
   conn_create( c );
@@ -345,17 +341,12 @@ bool test_channels() {
 
   ptpip_initialize( c );
 
-  while( conn_is_waiting_answer( c ) ) {
-    if( ch_read_blob( ch, &net_buffer ) ) {
-      conn_add_data( c, net_buffer.data, net_buffer.count );
-      conn_update( c );
-    } else {
-      show_waiting_answer();
-    }
+  while( onn_is_waiting_answer( c ) ) {
+    conn_update( c, 100000 );
+    show_waiting_answer();
   }
   printf( "Iniitalization complete\n" );
 
-  blob_destroy( &net_buffer );
   conn_destroy( c );
   ch_close( ch );
 
@@ -377,5 +368,8 @@ bool test_channels() {
   ch_close( c );
   printf( "Testing channels OK\n");
 */
+printf( "Iniitalization OK\n" );
+return false;
+
   return true;
 }

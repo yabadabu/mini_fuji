@@ -17,10 +17,12 @@ typedef struct {
 
 // ---------------------------------------
 typedef struct {
-  blob_t              recv_data;
+  blob_t              recv_data;      // Accumulated data before split it in packets
   blob_t              curr_packet;
   blob_t              last_answer;
   blob_t              otf_msg;
+  blob_t              net_buffer;     // Used to read from the channel
+
   uint32_t            sequence_id;
   cmd_t*              curr_cmd;
   void*               curr_output;    // Extra arg to provide in the parse fn
@@ -30,7 +32,7 @@ typedef struct {
 
 bool conn_create( conn_t* );
 void conn_add_data( conn_t*, const void* new_data, uint32_t data_size );
-void conn_update( conn_t* );
+void conn_update( conn_t* conn, int usecs );
 void conn_destroy( conn_t* conn );
 void conn_clear_state( conn_t* conn );
 bool conn_is_waiting_answer( conn_t* conn );

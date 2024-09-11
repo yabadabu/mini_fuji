@@ -26,6 +26,8 @@ const uint16_t msg_type_init = 0x0005;
 
 const uint32_t offset_payload = 12;
 
+bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs );
+
 void callback_clear( callback_progress_t* cb ) {
   cb->context = NULL;
   cb->callback = NULL;
@@ -43,6 +45,7 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->curr_packet, 0, 256 );
   blob_create( &conn->last_answer, 0, 256 );
   blob_create( &conn->otf_msg, 0, 256 );
+  blob_create( &conn->net_buffer, 0, 32768 );
 
   conn->channel = NULL;
   conn->sequence_id = 1;
@@ -54,6 +57,7 @@ bool conn_create( conn_t* conn ) {
 
 void conn_destroy( conn_t* conn ) {
   conn_clear_state( conn );
+  blob_destroy( &conn->otf_msg );
   blob_destroy( &conn->otf_msg );
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
@@ -161,7 +165,10 @@ int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output
   return 0;
 }
 
-void conn_update( conn_t* conn ) {
+void conn_update( conn_t* conn, int usecs ) {
+
+  if( conn->channel && ch_read_blob( conn->channel, &conn->net_buffer, usecs ) )
+    conn_add_data( conn, conn->net_buffer.data, conn->net_buffer.count );
 
   uint32_t required_bytes = 0;
   while( conn_has_packet_ready( conn, &required_bytes ) ) {

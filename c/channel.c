@@ -270,17 +270,20 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
   return true;
 }
 
-int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length ) {
+int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
   uint8_t* obuf = (uint8_t*) out_buffer;
   int sockfd = ch->fd;
   uint32_t total_bytes_read = 0;
+
+  // Max time to wait for an answer
+  struct timeval tv = { usecs / 1000000, usecs % 1000000 };
+
   while (total_bytes_read < max_length) {
 
       // Use select() to wait for the socket to be ready for reading
       fd_set read_fds;
       FD_ZERO(&read_fds);
       FD_SET(sockfd, &read_fds);
-      struct timeval tv = {0, 0};
 
       int ret = select(sockfd + 1, &read_fds, NULL, NULL, &tv);
       if (ret < 0) {

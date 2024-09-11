@@ -15,8 +15,8 @@ typedef struct {
 
 static discovery_service_t ds;
 
-bool ch_read_blob( channel_t* ch, blob_t* blob ) {
-  int bytes_read = ch_read( ch, blob->data, blob->reserved );
+bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
+  int bytes_read = ch_read( ch, blob->data, blob->reserved, usecs );
   if( bytes_read > 0 ) {
     blob->count = bytes_read;
     return true;
@@ -61,7 +61,7 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
   if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_msecs * ms_to_usecs ) ) {
     assert( ds.buff.reserved > 0 );
 
-    while( !ch_read_blob( &ch_client, &ds.buff ) )
+    while( !ch_read_blob( &ch_client, &ds.buff, 0 ) )
       ch_wait( ms_to_usecs );
     
     ch_close( &ch_client );
