@@ -70,6 +70,7 @@ typedef struct {
   handle_t handles[7];
 } handles_t;
 
+int ptpip_initialize( conn_t* conn );
 int ptpip_get_storage_ids( conn_t*, storage_ids_t* ); 
 int ptpip_get_objs( conn_t*, handles_t* ); 
 int ptpip_get_prop( conn_t*, prop_t* prop ); 

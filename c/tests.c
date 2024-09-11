@@ -47,54 +47,28 @@ bool test_blobs() {
   assert( !blob_is_valid( &b0 ) );
   assert( !blob_is_valid( &b1 ) );
 
+  blob_t bhex;
+  blob_create( &bhex, 4, 32 );
+  blob_write_u32le( &bhex, 0, 0x88664422 );
+  printf( "Tessting blob 1\n");
+  blob_from_hex_string( &bhex, 2, "A00a 33445566");
+  blob_dump( &bhex );
+  blob_from_hex_string( &bhex, -1, "33445566");
+  assert( blob_read_u32le( &bhex, 0 ) == 0x0aA04422 );
+  assert( blob_read_u32le( &bhex, 4 ) == 0x66554433 );
+  assert( blob_read_u32le( &bhex, 8 ) == 0x66554433 );
+  assert( blob_size( &bhex ) == 12 );
+  blob_dump( &bhex );
+
+  printf( "Tessting blobs OK\n");
   return true;
-} 
-
-void blob_from( blob_t* b, const char* hex_data ) {
-  const char* p = hex_data;
-
-  // Count characters
-  int n = 0;
-  while( *p ) {
-    if( *p != ' ')
-      n++;
-    ++p;
-  }
-  assert( ( n & 1 ) == 0 );
-  int nbytes = n / 2;
-  //printf( "%d bytes\n", nbytes );
-  blob_create( b, nbytes, nbytes );
-
-  p = hex_data;
-  uint8_t* op = b->data;
-  n = 0;
-  uint8_t v = 0;
-  while( *p ) {
-    if( *p != ' ') {
-      int hv = *p - '0';
-      if( *p >= 'a' && *p <= 'f' )
-        hv = 10 + (*p - 'a');
-      assert( !( *p >= 'A' && *p <= 'F' ) );
-      if( n & 1 ) {
-        v |= hv;
-        *op++ = v;
-        printf( "%02x ", v );
-        v = 0;
-      } else {
-        v |= hv << 4;
-      }
-      n++;
-    }
-    ++p;
-  }
-  printf( "\n" );
-
 } 
 
 void send_end_of_packet( conn_t* c ) {
   assert( conn_is_waiting_answer( c ) );
   blob_t eoc;
-  blob_from( &eoc, "0c000000 0300 1510 05000000" );
+  blob_create( &eoc, 0, 256 );
+  blob_from_hex_string( &eoc, 0, "0c000000 0300 1210 05000000" );
   conn_add_data( c, eoc.data, eoc.count );
   conn_update( c );
   assert( !conn_is_waiting_answer( c ) );
@@ -110,7 +84,9 @@ bool test_get_storage(conn_t* c) {
 
   // Fake network answer
   blob_t ans;
-  blob_from( &ans, "18000000 0200 0410 05000000 020000000100001002000010");
+  blob_create( &ans, 0, 256 );
+  blob_from_hex_string( &ans, 0, "18000000 0200 0210 05000000 020000000100001002000010");
+  blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
 
@@ -129,7 +105,8 @@ bool test_get_prop(conn_t* c) {
   ptpip_get_prop( c, &p );
 
   blob_t ans;
-  blob_from( &ans, "0e000000 0200 1510 05000000 0100");
+  blob_create( &ans, 0, 256 );
+  blob_from_hex_string( &ans, 0, "0e000000 0200 1510 05000000 0100");
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
@@ -204,13 +181,15 @@ bool test_get_obj(conn_t* c) {
   ptpip_get_obj( c, h, &output, my_callback );
 
   blob_t ans;
-  blob_from( &ans, "14000000 0200 1510 05000000 01002233");
+  blob_create( &ans, 0, 256 );
+  blob_from_hex_string( &ans, 0, "14000000 0200 1510 05000000 01002233");
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
 
   blob_t ans2;
-  blob_from( &ans2, "88998877");
+  blob_create( &ans2, 0, 256 );
+  blob_from_hex_string( &ans2, 0, "88998877");
   conn_add_data( c, ans2.data, ans2.count );
 
   conn_update( c );
@@ -226,16 +205,33 @@ bool test_get_obj(conn_t* c) {
 }
 
 bool test_close_session( conn_t* c ) {
+  printf( "ptpip_close_session\n");
   conn_clear_state( c );
   ptpip_close_session( c );
-  printf( "ptpip_close_session\n");
   return true;
 }
 
 bool test_open_session( conn_t* c ) {
+  printf( "Test open session\n" );
   conn_clear_state( c );
   ptpip_open_session( c );
-  printf( "Test open session\n" );
+  return true;
+}
+
+bool test_initialize( conn_t* c ) {
+  printf( "Test initialize\n" );
+  conn_clear_state( c );
+  ptpip_initialize( c );
+  assert( conn_is_waiting_answer( c ) );
+
+  const char* ans = "4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000";
+  blob_t bans;
+  blob_create( &bans, 0, 256 );
+  blob_from_hex_string( &bans, 0, ans );
+  conn_add_data( c, bans.data, bans.count );
+  conn_update( c );
+  assert( !conn_is_waiting_answer( c ) );
+
   return true;
 }
 
@@ -247,6 +243,9 @@ bool test_conn() {
   printf( "Conn created\n");
   conn_update( c );
   printf( "update complete\n");
+  
+  if( !test_initialize( c ))
+    return false;
   
   if( !test_close_session( c ))
     return false;

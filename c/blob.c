@@ -19,6 +19,51 @@ void blob_reserve( blob_t* blob, uint32_t num_bytes ) {
   blob_clear( blob );
 }
 
+void blob_from_hex_string( blob_t* blob, uint32_t offset, const char* hex_str ) {
+  assert( blob );
+  if( offset == 0xffffffff)
+    offset = blob->count;
+  assert( offset <= blob->count );
+  const char* ip = hex_str;
+  int num_chars = 0;
+  uint8_t new_byte = 0;
+  while( *ip ) {
+
+    if( *ip == ' ' ) {
+      ++ip;
+      continue;
+    } 
+    uint8_t nibble = 0;
+    if( *ip >= '0' && *ip <= '9' )
+      nibble = *ip - '0';
+    else if( *ip >= 'A' && *ip <= 'F' )
+      nibble = *ip - 'A' + 10;
+    else if( *ip >= 'a' && *ip <= 'f' )
+      nibble = *ip - 'a' + 10;
+    else {
+      assert( "Invalid character found in hex string" );
+    }
+
+    if( num_chars & 1 ) {
+      new_byte |= nibble;
+      assert( offset < blob->reserved );
+      blob->data[ offset ] = new_byte;
+      ++offset;
+
+    } else {
+      new_byte = nibble << 4;
+    }
+
+    ++ip;
+    ++num_chars;
+  }
+  if( offset > blob->count ) {
+    printf( "setting new count to %d\n", offset );
+    blob->count = offset;
+  }
+  assert( blob_is_valid( blob ) );
+}
+
 void blob_resize( blob_t* blob, uint32_t new_size ) {
   if( new_size <= blob->reserved ) {
     blob->count = new_size;
@@ -110,6 +155,9 @@ uint32_t blob_read_u32le( const blob_t* blob, uint32_t offset ) {
 }
 
 bool blob_is_valid( const blob_t* blob ) {
+  // assert( blob );
+  // assert( blob->data );
+  // assert( blob->reserved >= blob->count );
   return blob && blob->data && blob->count < 16384 && blob->reserved >= blob->count;
 }
 

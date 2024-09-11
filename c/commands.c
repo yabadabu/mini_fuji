@@ -10,6 +10,21 @@ cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
 cmd_t cmd_del_obj           = { .id = 0x100b, .name = "del_obj" };
 
 // ------------------------------------------------------
+int parse_initialize_comm( const blob_t* args, void* output ) {
+  printf( "Parse initialize_comm\n" );
+  blob_dump( args );
+  // 16 bytes guis
+  // friendly name in utf16
+  return 0;
+}
+
+cmd_t cmd_initialize_comm   = { 
+  .id = 0x0000, 
+  .name = "initialize_comm",
+  .parse = &parse_initialize_comm
+};
+
+// ------------------------------------------------------
 int parse_get_prop( const blob_t* args, void* output ) {
   prop_t* prop = (prop_t*) output;
   assert( output );

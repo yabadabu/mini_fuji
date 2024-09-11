@@ -16,11 +16,13 @@ extern cmd_t cmd_get_prop;
 extern cmd_t cmd_set_prop;
 extern cmd_t cmd_get_storage_ids;
 extern cmd_t cmd_get_obj_handles;
+extern cmd_t cmd_initialize_comm;
 
 // ------------------------------------------------------
 const uint16_t msg_type_cmd  = 0x0001;
 const uint16_t msg_type_data = 0x0002;
 const uint16_t msg_type_end  = 0x0003;
+const uint16_t msg_type_init = 0x0005;
 
 const uint32_t offset_payload = 12;
 
@@ -125,11 +127,15 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
     args.data = msg->data + offset_payload;
     args.count = packet_size - offset_payload;
     args.reserved = 0;
-    if( args.count > 0 )
+    if( args.count > 0 && conn->curr_cmd->parse )
       conn->curr_cmd->parse( &args, conn->curr_output );
 
     // The command is over?
     if( msg_type == msg_type_end )
+      conn_clear_state( conn );
+
+    // We will not receive a 'end' for the initialization command
+    else if( msg_type == msg_type_data && cmd_id == cmd_initialize_comm.id )
       conn_clear_state( conn );
 
   } 
@@ -196,6 +202,27 @@ int ptpip_basic_cmd_u32( conn_t* conn, cmd_t* cmd, uint32_t payload_int, void* o
 }
 
 // -------------------------------------------------------------
+int ptpip_initialize( conn_t* conn ) {
+  // 52000000 Size of the msg
+  // 01000000 Init Cmd Request Packet
+  // f2e4538f protcol verson
+  // ada5485d87b27f0bd3d5ded0  Client GUID
+  // < Host Name as string >
+  // < Version as 4 bytes >
+  
+  blob_t* msg = &conn->otf_msg;
+  cmd_t* cmd = &cmd_initialize_comm;
+  uint32_t protocol_version = 0x8f53e4f2;
+  create_cmd_msg( msg, cmd, msg_type_cmd, protocol_version, 0x46 );
+  blob_from_hex_string( msg, 12, "ada5485d 87b27f0b d3d5ded0 fe7fa8c0 4a00750061006e0073002d004d006100630042006f006f006b002d00500072006f000000000000000000000000000000000000000000" );
+  // we send: 52000000 0100 0000 f2e4538f ada5485d 87b27f0b d3d5ded0 fe7fa8c0 4a00750061006e0073002d004d006100630042006f006f006b002d00500072006f000000000000000000000000000000000000000000
+  // we recv: 4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000
+  
+  conn_transaction( conn, msg, cmd, NULL );
+
+  return 0;
+}
+
 int ptpip_open_session( conn_t* conn ) {
   return ptpip_basic_cmd( conn, &cmd_open_session );
 }
