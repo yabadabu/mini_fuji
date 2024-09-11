@@ -44,6 +44,7 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->last_answer, 0, 256 );
   blob_create( &conn->otf_msg, 0, 256 );
 
+  conn->channel = NULL;
   conn->sequence_id = 1;
   conn_clear_state( conn );
 
@@ -75,6 +76,7 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
   printf( "Recv %4d bytes\n", data_size );
   blob_append_data( &conn->recv_data, new_data, data_size );
   
+  // Report to the progress callback
   if( conn->on_progress.callback ) {
     uint32_t required_bytes = 0;
     conn_has_packet_ready( conn, &required_bytes );
@@ -84,9 +86,11 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
   }
 }
 
-void conn_send( conn_t* conn, const blob_t* data ) {
-  printf( "Send " );
-  blob_dump( data );
+void conn_send( conn_t* conn, const blob_t* blob ) {
+  printf( "Send %p ", conn->channel );
+  blob_dump( blob );
+  if( conn->channel )
+    ch_write( conn->channel, blob->data, blob_size( blob ) );
 }
 
 bool conn_has_packet_ready( conn_t* conn, uint32_t* packet_size ) {

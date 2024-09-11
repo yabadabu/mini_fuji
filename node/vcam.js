@@ -52,11 +52,18 @@ const server = net.createServer((socket) => {
     console.log("Client connected to the virtual cam");
 
     socket.on("data", (data) => {
-        const strData = data.toString();
-        console.log(`Received: ${strData}`);
-        let result = "BLAH"
-        const n = socket.write(result.toString());
-        console.log( "Answering", result, n )
+        
+        console.log(`Received: ${data.length} bytes`);
+
+        const cmd = data.readInt32LE( 4 )
+        if( cmd == 0x00000001 ) {
+          console.log( "This is the PTP initialize cmd\n");
+          const answer1 = Buffer.from("4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000", "hex");
+          const n = socket.write(answer1);
+        } else {
+          console.log( "Unexpected cmd", data.toString("hex") );
+          //console.log( "Answering", result, n )
+        }
     });
 
     socket.on("end", () => {

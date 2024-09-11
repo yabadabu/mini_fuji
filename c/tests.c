@@ -304,6 +304,15 @@ bool test_channel_accept() {
   return true;
 }
 
+void show_waiting_answer() {
+  char tc[5] = "\\|/-";
+  static int idx = 0;
+  printf( "\rWaiting answer from the camera... %c ", tc[idx] );
+  fflush( stdout );
+  idx = ( idx + 1 ) % 4;
+  ch_wait( 1000000 ); 
+}
+
 bool test_channels() {
   printf( "Testing channels...\n");
 
@@ -317,12 +326,40 @@ bool test_channels() {
   sprintf( conn_str, "tcp:%s:%d", camera_info.ip, camera_info.port );
   printf( "Connecting to >>%s<<\n", conn_str );
 
-  channel_t ch;
-  channel_t* c = &ch;
-  if( !ch_create( c, conn_str) )
+  channel_t channel;
+  channel_t* ch = &channel;
+  if( !ch_create( ch, conn_str) )
     return false;
   printf( "Connected\n" );
 
+  blob_t net_buffer;
+  blob_create( &net_buffer, 0, 32 * 1024 );
+
+  conn_t conn;
+  conn_t* c = &conn;
+  conn_create( c );
+  conn.channel = ch;
+
+  // set socket
+  // set camera info?
+
+  ptpip_initialize( c );
+
+  while( conn_is_waiting_answer( c ) ) {
+    if( ch_read_blob( ch, &net_buffer ) ) {
+      conn_add_data( c, net_buffer.data, net_buffer.count );
+      conn_update( c );
+    } else {
+      show_waiting_answer();
+    }
+  }
+  printf( "Iniitalization complete\n" );
+
+  blob_destroy( &net_buffer );
+  conn_destroy( c );
+  ch_close( ch );
+
+/*
   printf( "Writing\n" );
   int bytes_written = ch_write( c, "JOHN", 4 );
   assert( bytes_written == 4 );
@@ -339,6 +376,6 @@ bool test_channels() {
 
   ch_close( c );
   printf( "Testing channels OK\n");
-
+*/
   return true;
 }
