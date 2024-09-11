@@ -2,6 +2,7 @@
 #include "connection.h"
 #include "channel.h"
 #include <assert.h>
+#include <string.h>     // strlen
 #include <stdio.h>      // printf
 
 bool test_blobs() {
@@ -283,11 +284,71 @@ bool test_conn() {
 
 bool test_channels() {
   printf( "Testing channels...\n");
-  channel_t ch;
-  if( ch_open( &ch, "tcp:127.0.0.1:80") )
+
+  blob_t buff;
+  blob_create( &buff, 0, 1024 );
+
+  channel_t ch_udp;
+  if( ch_create( &ch_udp, "udp:255.255.255.255:5002"))
     return false;
 
-  ch_close( &ch );
+  const char* my_ip = "192.168.1.136";
+  const char* prefix = "DISCOVERY * HTTP/1.1\r\nHOST: ";
+  const char* suffix = "\r\nMX: 5\r\nSERVICE: PCSS/1.0\r\n";
+  blob_t discovery_msg;
+  blob_create( &discovery_msg, 0, 512 );
+  blob_append_data( &discovery_msg, prefix, strlen( prefix ) );
+  blob_append_data( &discovery_msg, my_ip, strlen( my_ip ) );
+  blob_append_data( &discovery_msg, suffix, strlen( suffix ) );
+
+  channel_t ch_discovery;
+  if( ch_create( &ch_discovery, "tcp_server:0.0.0.0:51560"))
+    return false;
+  printf( "TCP.Server listening at port %d\n", ch_discovery.port );
+
+  while( true ) {
+    int brc = ch_broadcast( &ch_udp, discovery_msg.data, discovery_msg.count );
+    printf( "Broadcasted msg : %d\n", brc );
+    channel_t ch_client;
+    if( ch_accept( &ch_discovery, &ch_client, 1000000 ) ) {
+      printf( "New connectiong accepted!\n" );
+      while( true ) {
+        int bytes_read = ch_read( &ch_client, buff.data, buff.reserved );
+        if( bytes_read > 0 ) {
+          buff.count = bytes_read;
+          blob_dump( &buff );
+          break;
+        }
+      }
+      break;
+    }
+
+    ch_wait( 1000000 );
+  }
+
+  ch_close( &ch_udp );
+  ch_close( &ch_discovery );
+
+return false;
+
+  channel_t ch;
+  channel_t* c = &ch;
+  if( ch_create( c, "tcp:127.0.0.1:5001") )
+    return false;
+  int bytes_written = ch_write( c, "JOHN", 4);
+  assert( bytes_written == 4 );
+
+  while( true ) {
+    int bytes_read = ch_read( c, buff.data, buff.reserved );
+    if( bytes_read > 0 ) {
+      buff.count = bytes_read;
+      blob_dump( &buff );
+      break;
+    }
+  }
+
+  ch_close( c );
   printf( "Testing channels OK\n");
+return false;
   return true;
 }
