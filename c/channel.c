@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>   // for fcntl()
 #include <unistd.h>     // for close()
+#include <netinet/tcp.h>   // For TCP_NODELAY
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -36,6 +37,13 @@ static int set_non_blocking_socket(int sockfd) {
   }
 
   return 0;
+}
+
+static void set_tcp_no_delay( int sockfd ) {
+  int flag = 1;
+  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) < 0) {
+      perror("setsockopt(TCP_NODELAY) failed");
+  }
 }
 
 void ch_close( channel_t* ch ) {
@@ -181,19 +189,18 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
   }
   else if( strncmp( conn_info, "tcp", 3 ) == 0 ) {
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
       perror("socket");
       return false;
     }
 
-    // Step 3: Configure the server address
     struct sockaddr_in remote_addr;
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
     remote_addr.sin_port = htons(port);  // Connect to port 8080 (adjust as needed)
     
-    // Convert and set the server IP address (e.g., "192.168.1.1")
+    // Convert and set the remote server IP address (e.g., "192.168.1.1")
     if (inet_pton(AF_INET, ip, &remote_addr.sin_addr) <= 0) {
         perror("inet_pton");
         close(sockfd);
@@ -212,6 +219,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
       }
     }
 
+    set_tcp_no_delay( sockfd );
   }
 
   if( !ch->is_udp ) {
@@ -221,12 +229,14 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
     }
   }
 
+
   ch->port = port;
   ch->fd = sockfd;
   return true;
 }
 
-int ch_read( channel_t* ch, uint8_t *out_buffer, uint32_t max_length ) {
+int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length ) {
+  uint8_t* obuf = (uint8_t*) out_buffer;
   int sockfd = ch->fd;
   uint32_t total_bytes_read = 0;
   while (total_bytes_read < max_length) {
@@ -243,7 +253,7 @@ int ch_read( channel_t* ch, uint8_t *out_buffer, uint32_t max_length ) {
           return -1;
 
       } else if (ret > 0 && FD_ISSET(sockfd, &read_fds)) {
-          int bytes_read = read(sockfd, out_buffer + total_bytes_read, max_length - total_bytes_read);
+          int bytes_read = read(sockfd, obuf, max_length - total_bytes_read);
           if (bytes_read < 0) {
               if (errno == EAGAIN || errno == EWOULDBLOCK) {
                   break;
@@ -255,6 +265,7 @@ int ch_read( channel_t* ch, uint8_t *out_buffer, uint32_t max_length ) {
               break;
           }
           total_bytes_read += bytes_read;
+          obuf += bytes_read;
 
       // Nothing to read. timeout
       } else if( ret == 0 ) {
@@ -326,6 +337,7 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
     return false;
 
   set_non_blocking_socket( new_fd );
+  set_tcp_no_delay( new_fd );
 
   ch_clean( out_new_client );
 

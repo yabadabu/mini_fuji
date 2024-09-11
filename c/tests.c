@@ -1,10 +1,13 @@
 #include "blob.h"
 #include "connection.h"
 #include "channel.h"
+#include "discovery.h"
 #include <assert.h>
 #include <string.h>     // strlen
 #include <stdio.h>      // printf
 #include <stdlib.h>     // atoi
+
+bool ch_read_blob( channel_t* ch, blob_t* blob );
 
 bool test_blobs() {
   printf( "Tessting blobs...\n");
@@ -301,103 +304,14 @@ bool test_channel_accept() {
   return true;
 }
 
-bool ch_read_blob( channel_t* ch, blob_t* blob ) {
-  int bytes_read = ch_read( ch, blob->data, blob->reserved );
-  if( bytes_read > 0 ) {
-    blob->count = bytes_read;
-    return true;
-  }
-  return false;
-}
-
-
-typedef struct {
-  int  port;
-  char ip[64];
-  char name[80];
-} camera_info_t;
-
-
 bool test_channels() {
   printf( "Testing channels...\n");
 
-  blob_t buff;
-  blob_create( &buff, 0, 1024 );
-
-  // Create a socket to broadcast udp msg a port 5002
-  channel_t ch_udp;
-  if( !ch_create( &ch_udp, "udp:255.255.255.255:5002") )
-    return false;
-
-  // Notify the cameras my identify
-  const char* my_ip = "192.168.1.136";
-  const char* prefix = "DISCOVERY * HTTP/1.1\r\nHOST: ";
-  const char* suffix = "\r\nMX: 5\r\nSERVICE: PCSS/1.0\r\n";
-  blob_t discovery_msg;
-  blob_create( &discovery_msg, 0, 512 );
-  blob_append_data( &discovery_msg, prefix, strlen( prefix ) );
-  blob_append_data( &discovery_msg, my_ip, strlen( my_ip ) );
-  blob_append_data( &discovery_msg, suffix, strlen( suffix ) );
-
-  // The camera will connect to this address via tcp and send his information
-  channel_t ch_discovery;
-  if( !ch_create( &ch_discovery, "tcp_server:0.0.0.0:51560") )
-    return false;
-  assert( ch_discovery.port = 51560 );
-  printf( "TCP.Server listening at port %d\n", ch_discovery.port );
-
   camera_info_t camera_info;
-  memset( &camera_info, 0x00, sizeof( camera_info_t ));
-
-  while( true ) {
-    // Keep sending the udp msg until we get a camera respondring
-    int brc = ch_broadcast( &ch_udp, discovery_msg.data, discovery_msg.count );
-    printf( "Broadcasted msg\n" );
-
-    // The response is ... he tries to connect to the ip we sent and sends his ip
-    channel_t ch_client;
-
-    if( ch_accept( &ch_discovery, &ch_client, 5000000 ) ) {
-      printf( "New connection accepted!\n" );
-      while( !ch_read_blob( &ch_client, &buff ) )
-        ch_wait( 10 * 1000 );
-      
-      ch_close( &ch_client );
-
-      /*
-      NOTIFY * HTTP/1.1
-      DSC: 192.168.1.136
-      CAMERANAME: X-T2
-      DSCPORT: 15740
-      MX: 7
-      SERVICE: PCSS/1.0
-      */
-      const char* q = (const char*) buff.data;
-      while( q ) {
-        const char* eol = strchr( q, '\r' );
-        if( !eol )
-          break;
-
-        const char* sep = strchr( q, ':' );
-        if( !sep )
-          break;
-        sep += 2;
-
-        if( strncmp( q, "DSCPORT: ", 9 ) == 0 ) 
-          camera_info.port = atoi( sep );
-        else if( strncmp( q, "DSC: ", 5 ) == 0 )
-          strncpy( camera_info.ip, sep, eol - sep );
-        else if( strncmp( q, "CAMERANAME: ", 12 ) == 0 )
-          strncpy( camera_info.name, sep, eol - sep );
-        q = eol + 2;
-      }
-      printf( "Camera ip is >>%s:%d<< Name:>>%s<<\n", camera_info.ip, camera_info.port, camera_info.name );
-      break;
-    }
-  }
-
-  ch_close( &ch_udp );
-  ch_close( &ch_discovery );
+  discovery_start( "192.168.1.136" );
+  while( !discovery_update( &camera_info, 5 * 1000 ) )
+    printf( "Searching camera...\n");
+  discovery_stop();
 
   char conn_str[128];
   sprintf( conn_str, "tcp:%s:%d", camera_info.ip, camera_info.port );
@@ -407,15 +321,24 @@ bool test_channels() {
   channel_t* c = &ch;
   if( !ch_create( c, conn_str) )
     return false;
-  int bytes_written = ch_write( c, "JOHN", 4);
-  assert( bytes_written == 4 );
+  printf( "Connected\n" );
 
+  printf( "Writing\n" );
+  int bytes_written = ch_write( c, "JOHN", 4 );
+  assert( bytes_written == 4 );
+  printf( "Write done\n" );
+
+  blob_t buff;
+  blob_create( &buff, 0, 64 );
+
+  printf( "Waiting answer\n" );
   while( !ch_read_blob( c, &buff ) ) 
     ch_wait( 10 * 1000 );
   blob_dump( &buff );
+  printf( "Read from camera\n");
 
   ch_close( c );
   printf( "Testing channels OK\n");
-return false;
+
   return true;
 }

@@ -49,7 +49,7 @@ udp_server.bind(5002);
 
 
 const server = net.createServer((socket) => {
-    console.log("Client connected");
+    console.log("Client connected to the virtual cam");
 
     socket.on("data", (data) => {
         const strData = data.toString();
