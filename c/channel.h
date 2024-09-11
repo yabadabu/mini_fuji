@@ -4,6 +4,13 @@
 #include <stdint.h>
 
 typedef struct {
+
+// #ifdef _WIN32
+//       typedef SOCKET TOSSocket;
+// #else
+//       typedef int    TOSSocket;
+// #endif
+
   int  fd;
   bool is_udp;
   bool is_broadcast;

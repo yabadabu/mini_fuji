@@ -3,6 +3,16 @@
 #include <stdio.h>      // printf
 #include <stdlib.h>
 
+#ifdef _WIN32
+
+#define sys_close               closesocket
+#define CH_ERR_WOULD_BLOCK      WSAEWOULDBLOCK
+#define CH_ERR_CONN_IN_PROGRESS WSAEWOULDBLOCK
+
+#pragma comment(lib, "Ws2_32.lib")
+
+#else
+
 #include <errno.h>
 #include <fcntl.h>   // for fcntl()
 #include <unistd.h>     // for close()
@@ -16,6 +26,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+
+#define sys_close               close
+#define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
+#define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
+
+#endif
 
 #include "channel.h"
 
@@ -36,6 +52,24 @@ static int set_non_blocking_socket(int sockfd) {
       return -1;
   }
 
+/*
+     bool setNonBlocking( TSocket sock ) {
+        // set non-blocking
+#if defined(O_NONBLOCK)
+        int flags = fcntl(sock.s, F_GETFL, 0);
+        if (flags == -1)
+          flags = 0;
+        auto rc = fcntl(sock.s, F_SETFL, flags | O_NONBLOCK);
+#else
+        u_long iMode = 1;
+        auto rc = ioctlsocket(sock.s, FIONBIO, &iMode);
+#endif
+        if (rc != 0)
+          dbg("Failed to set socket %d as non-blocking\n", sock.s);
+        return rc == 0;
+      }
+      */
+
   return 0;
 }
 
@@ -47,7 +81,7 @@ static void set_tcp_no_delay( int sockfd ) {
 }
 
 void ch_close( channel_t* ch ) {
-  close( ch->fd );
+  sys_close( ch->fd );
   ch->fd = -1;
 }
 
@@ -86,6 +120,8 @@ static void ch_clean( channel_t* ch ) {
   ch->port = 0;
 }
 
+// ("127.0.0.1", port, AF_INET )
+// ("::", port, AF_INET6 )
 bool ch_create( channel_t* ch, const char* conn_info ) {
   assert( ch );
   assert( conn_info );
@@ -256,7 +292,7 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length ) {
       } else if (ret > 0 && FD_ISSET(sockfd, &read_fds)) {
           int bytes_read = read(sockfd, obuf, max_length - total_bytes_read);
           if (bytes_read < 0) {
-              if (errno == EAGAIN || errno == EWOULDBLOCK) {
+              if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
                   break;
               } else {
                   perror("read");
@@ -296,7 +332,7 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
       } else if (ret > 0 && FD_ISSET(sockfd, &write_fds)) {
           int bytes_written = write(sockfd, buffer + total_bytes_written, length - total_bytes_written);
           if (bytes_written < 0) {
-              if (errno == EAGAIN || errno == EWOULDBLOCK) {
+              if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
                   break;
 
               } else {
