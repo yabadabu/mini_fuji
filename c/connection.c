@@ -75,12 +75,8 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
     uint32_t required_bytes = 0;
     conn_has_packet_ready( conn, &required_bytes );
     uint32_t bytes_in_buffer = blob_size( &conn->recv_data );
-    if( required_bytes > 0 && bytes_in_buffer > 0 ) {
-      float ratio = (float)bytes_in_buffer / (float)required_bytes;
-      if( ratio > 1.0 ) 
-        ratio = 1.0f;
-      (*conn->on_progress.callback)( conn->on_progress.context, ratio );
-    }
+    if( required_bytes > 0 && bytes_in_buffer > 0 )
+      (*conn->on_progress.callback)( conn->on_progress.context, bytes_in_buffer, required_bytes );
   }
 }
 

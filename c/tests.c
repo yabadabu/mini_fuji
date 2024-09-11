@@ -171,8 +171,8 @@ bool test_del_obj(conn_t* c) {
   return true;
 }
 
-static void callback_progress( void* context, float progress ) {
-  printf( "On callback_progress %f (Ctx:%p)\n", progress, context );
+static void callback_progress( void* context, uint32_t curr, uint32_t required ) {
+  printf( "On callback_progress %d/%d (Ctx:%p)\n", curr, required, context );
   assert( context );
   int* counter = (int*) context;
   *counter += 1;

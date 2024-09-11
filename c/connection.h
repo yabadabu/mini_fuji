@@ -11,7 +11,7 @@ typedef struct {
 
 typedef struct {
    void*  context;
-   void (*callback)( void* context, float progress );
+   void (*callback)( void* context, uint32_t current, uint32_t required );
 } callback_progress_t;
 
 // ---------------------------------------
