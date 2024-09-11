@@ -118,7 +118,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   printf( "%d bytes %04x %04x %08x CurrCmd:%s\n", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
 
   if( conn->curr_cmd ) {
-    // expect cmd_id == otf_msg->cmd_id
+    // expect seq_id == otf_msg->seq_id
     assert( msg_type == msg_type_data || msg_type == msg_type_end );
 
     // Send the extra bytes to the current cmd to parse
