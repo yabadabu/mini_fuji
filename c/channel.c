@@ -76,8 +76,24 @@ static int set_non_blocking_socket(int sockfd) {
 static void set_tcp_no_delay( int sockfd ) {
   int flag = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) < 0) {
-      perror("setsockopt(TCP_NODELAY) failed");
+    perror("setsockopt(TCP_NODELAY) failed");
   }
+}
+
+static void set_reuse_addr( int sockfd ) {
+  int optval = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+    perror("setsockopt");
+  }
+}
+
+static bool set_udp_broadcast( int sockfd ) {
+  int broadcast_permission = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_permission, sizeof(broadcast_permission)) < 0) {
+    perror("setsockopt (SO_BROADCAST)");
+    return false;
+  }
+  return true;
 }
 
 void ch_close( channel_t* ch ) {
@@ -127,6 +143,10 @@ static void ch_clean( channel_t* ch ) {
 
 // ("127.0.0.1", port, AF_INET )
 // ("::", port, AF_INET6 )
+
+// tcp:192.168.1.27:8080    -> tcp client connection to server at port 192.168.1.27:8080
+// tcp_server:0.0.0.0:4800  -> tcp server at port 4800
+// udp:0.0.0.0:4700         -> Broadcast udp to port 4700
 bool ch_create( channel_t* ch, const char* conn_info ) {
   assert( ch );
   assert( conn_info );
@@ -162,14 +182,9 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
 
     // Enable the broadcast option
     bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
-    if( is_broadcast ) {
-      int broadcast_permission = 1;
-      if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_permission, sizeof(broadcast_permission)) < 0) {
-        perror("setsockopt (SO_BROADCAST)");
-        close(sockfd);
-        return false;
-      }
-
+    if( is_broadcast && !set_udp_broadcast( sockfd ) )
+      close(sockfd);
+      return false;
     }
 
   }
@@ -192,13 +207,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
       if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
         continue;
 
-      // Step 2: Set SO_REUSEADDR option
-      int optval = 1;
-      if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
-        perror("setsockopt");
-        close(sockfd);
-        continue;
-      }
+      set_reuse_addr( sockfd );
 
       if (bind(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
         perror( "bind failed");
