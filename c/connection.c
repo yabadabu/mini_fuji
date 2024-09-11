@@ -1,98 +1,20 @@
-#include <assert.h>
 #include <stdio.h>
+#include <assert.h>
 #include "connection.h"
 
 prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16 };
 
-cmd_t cmd_open_session      = { .id = 0x1002, .name = "open_session" };
-cmd_t cmd_close_session     = { .id = 0x1003, .name = "close_session" };
-cmd_t cmd_initiate_capture  = { .id = 0x100e, .name = "initiate_capture" };
-cmd_t cmd_initiate_open_capture  = { .id = 0x101c, .name = "initiate_open_capture" };
-cmd_t cmd_terminate_capture = { .id = 0x1018, .name = "terminate_capture" };
-cmd_t cmd_del_obj           = { .id = 0x100b, .name = "del_obj" };
-
-// ------------------------------------------------------
-int parse_get_prop( const blob_t* args, void* output ) {
-  prop_t* prop = (prop_t*) output;
-  assert( output );
-  
-  printf( "Parsing get_prop answer\n");
-
-  if( prop->data_type == PDT_U16 ) {
-    assert( blob_size( args ) == 2 );
-    prop->val16 = blob_read_u16le( args, 0 );
-
-  } else if( prop->data_type == PDT_U32 ) {
-    assert( blob_size( args ) == 4 );
-    prop->val32 = blob_read_u32le( args, 0 );
-  }
-
-  return 0; 
-}
-
-cmd_t cmd_get_prop = { 
-  .id = 0x1014, 
-  .name = "get_prop", 
-  .parse = &parse_get_prop 
-};
-
-cmd_t cmd_set_prop = { 
-  .id = 0x1015, 
-  .name = "set_prop", 
-};
-
-// ------------------------------------------------------
-int parse_get_storage_ids( const blob_t* args, void* output ) {
-  storage_ids_t* out_ids = (storage_ids_t*) output;
-  out_ids->count = blob_read_u32le( args, 0 );
-  if( out_ids->count > 3 )
-    out_ids->count = 3;
-  for( uint32_t i=0; i<out_ids->count; ++i ) {
-    uint32_t id = blob_read_u32le( args, 4 + i * 4 );
-    out_ids->ids[i].storage_id = id;
-  }
-  return 0; 
-}
-
-cmd_t cmd_get_storage_ids = { 
-  .id = 0x1004, 
-  .name = "get_storage_ids", 
-  .parse = &parse_get_storage_ids 
-};
-
-// ------------------------------------------------------
-int parse_get_obj_handles( const blob_t* args, void* output ) {
-  handles_t* out_ids = (handles_t*) output;
-  out_ids->count = blob_read_u32le( args, 0 );
-  if( out_ids->count > 3 )
-    out_ids->count = 3;
-  for( uint32_t i=0; i<out_ids->count; ++i ) {
-    uint32_t id = blob_read_u32le( args, 4 + i * 4 );
-    out_ids->handles[i].value = id;
-  }
-  return 0; 
-}
-
-cmd_t cmd_get_obj_handles = { 
-  .id = 0x1007, 
-  .name = "get_obj_handles", 
-  .parse = &parse_get_obj_handles
-};
-
-// ------------------------------------------------------
-int parse_get_obj( const blob_t* args, void* output ) {
-  blob_t* b = (blob_t*) output;
-  assert( b );
-  blob_reserve( b, args->count );
-  blob_append_data( b, args->data, args->count );
-  return 0; 
-}
-
-cmd_t cmd_get_obj = { 
-  .id = 0x1009, 
-  .name = "get_obj", 
-  .parse = &parse_get_obj
-};
+extern cmd_t cmd_open_session;
+extern cmd_t cmd_close_session;
+extern cmd_t cmd_initiate_capture;
+extern cmd_t cmd_initiate_open_capture;
+extern cmd_t cmd_terminate_capture;
+extern cmd_t cmd_del_obj;
+extern cmd_t cmd_get_obj;
+extern cmd_t cmd_get_prop;
+extern cmd_t cmd_set_prop;
+extern cmd_t cmd_get_storage_ids;
+extern cmd_t cmd_get_obj_handles;
 
 // ------------------------------------------------------
 const uint16_t msg_type_cmd  = 0x0001;
@@ -101,11 +23,16 @@ const uint16_t msg_type_end  = 0x0003;
 
 const uint32_t offset_payload = 12;
 
+void callback_clear( callback_progress_t* cb ) {
+  cb->context = NULL;
+  cb->callback = NULL;
+}
+
 // ------------------------------------------------------
 // Local functions
-bool conn_has_packet_ready( conn_t*, uint32_t* packet_size );
+bool     conn_has_packet_ready( conn_t*, uint32_t* packet_size );
 uint32_t conn_next_sequence( conn_t* );
-void conn_send( conn_t*, const blob_t* blob );
+void     conn_send( conn_t*, const blob_t* blob );
 
 bool conn_create( conn_t* conn ) {
 
@@ -124,8 +51,7 @@ bool conn_create( conn_t* conn ) {
   conn->curr_output = NULL;
   conn->curr_cmd = NULL;
 
-  callback_context_t empty_context = { .context = NULL, .progress = NULL };
-  conn->curr_callback_context = empty_context;
+  callback_clear( &conn->on_progress );
   return true;
 }
 
@@ -143,9 +69,17 @@ uint32_t conn_next_msg_sequence( conn_t* conn) {
 void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
   printf( "Recv    %4d bytes\n", data_size );
   blob_append_data( &conn->recv_data, new_data, data_size );
-  if( conn->curr_callback_context.progress ) {
-    printf( "Recv data and we have a context!!\n");
-    (*conn->curr_callback_context.progress)( conn->curr_callback_context.context, 0.2 );
+  
+  if( conn->on_progress.callback ) {
+    uint32_t required_bytes = 0;
+    conn_has_packet_ready( conn, &required_bytes );
+    uint32_t bytes_in_buffer = blob_size( &conn->recv_data );
+    if( required_bytes > 0 && bytes_in_buffer > 0 ) {
+      float ratio = (float)bytes_in_buffer / (float)required_bytes;
+      if( ratio > 1.0 ) 
+        ratio = 1.0f;
+      (*conn->on_progress.callback)( conn->on_progress.context, ratio );
+    }
   }
 }
 
@@ -184,9 +118,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
     conn->curr_cmd->parse( &args, conn->curr_output );
   } 
 
-  // Clear callback progress
-  conn->curr_callback_context.context = NULL;
-  conn->curr_callback_context.progress = NULL;
+  callback_clear( &conn->on_progress );
 }
 
 int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output_data) {
@@ -310,12 +242,10 @@ int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out
   return 0;
 }
 
-int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_context_t ctx ) {
+int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_progress_t on_progress ) {
   assert( out_obj && conn && handle.value );
-  conn->curr_callback_context = ctx;
-  
+  conn->on_progress = on_progress;
   int rc = ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
-
   return rc;
 }
 

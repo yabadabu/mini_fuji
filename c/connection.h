@@ -11,19 +11,19 @@ typedef struct {
 
 typedef struct {
    void*  context;
-   void (*progress)( void* context, float progress );
-} callback_context_t;
+   void (*callback)( void* context, float progress );
+} callback_progress_t;
 
 // ---------------------------------------
 typedef struct {
-  blob_t   recv_data;
-  blob_t   curr_packet;
-  blob_t   last_answer;
-  blob_t   otf_msg;
-  uint32_t sequence_id;
-  cmd_t*   curr_cmd;
-  void*    curr_output;
-  callback_context_t curr_callback_context;
+  blob_t              recv_data;
+  blob_t              curr_packet;
+  blob_t              last_answer;
+  blob_t              otf_msg;
+  uint32_t            sequence_id;
+  cmd_t*              curr_cmd;
+  void*               curr_output;
+  callback_progress_t on_progress;
 } conn_t;
 
 bool conn_create( conn_t* );
@@ -77,7 +77,7 @@ int ptpip_close_session( conn_t* );
 int ptpip_initiate_capture( conn_t* );
 int ptpip_initiate_open_capture( conn_t* );
 int ptpip_terminate_capture( conn_t* );
-int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, callback_context_t ctx );
+int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, callback_progress_t on_progress );
 int ptpip_del_obj( conn_t*, handle_t handle );
 
 // ---------------------------------------

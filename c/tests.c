@@ -50,8 +50,6 @@ bool test_blobs() {
   return true;
 } 
 
-extern cmd_t cmd_get_storage_ids;
-
 void blob_from( blob_t* b, const char* hex_data ) {
   const char* p = hex_data;
 
@@ -172,8 +170,8 @@ bool test_get_obj(conn_t* c) {
   blob_create( &output, 0 );
 
   int called = 0;
-  callback_context_t my_context = { .context = &called, .progress = &callback_progress };
-  ptpip_get_obj( c, h, &output, my_context );
+  callback_progress_t my_callback = { .context = &called, .callback = &callback_progress };
+  ptpip_get_obj( c, h, &output, my_callback );
 
   blob_t ans;
   blob_from( &ans, "14000000 0200 1510 05000000 01002233");
@@ -190,7 +188,7 @@ bool test_get_obj(conn_t* c) {
   blob_dump( &output );
   assert( output.data[0] == 0x01 );
   assert( output.data[4] == 0x88 );
-  assert( called > 0 );
+  assert( called == 2 );
   return true;
 }
 
