@@ -9,7 +9,7 @@ typedef struct {
   uint8_t* data;
 } blob_t;
 
-void blob_create( blob_t* blob, uint32_t num_bytes );
+void blob_create( blob_t* blob, uint32_t num_bytes, uint32_t bytes_to_reserve );
 void blob_reserve( blob_t* blob, uint32_t num_bytes );
 void blob_resize( blob_t* blob, uint32_t new_size );
 void blob_clear( blob_t* blob );

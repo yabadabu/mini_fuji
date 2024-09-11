@@ -36,17 +36,11 @@ void     conn_send( conn_t*, const blob_t* blob );
 
 bool conn_create( conn_t* conn ) {
 
-  blob_create( &conn->recv_data, 0 );
-  blob_reserve( &conn->recv_data, 256 );
-
-  blob_create( &conn->curr_packet, 0 );
-  blob_reserve( &conn->curr_packet, 256 );
-
-  blob_create( &conn->last_answer, 0 );
-  blob_reserve( &conn->last_answer, 256 );
-
-  blob_create( &conn->otf_msg, 0 );
-  blob_reserve( &conn->otf_msg, 256 );
+  blob_create( &conn->recv_data, 0, 256 );
+  blob_create( &conn->curr_packet, 0, 256 );
+  blob_create( &conn->last_answer, 0, 256 );
+  blob_create( &conn->otf_msg, 0, 256 );
+  
   conn->sequence_id = 1;
   conn->curr_output = NULL;
   conn->curr_cmd = NULL;
@@ -56,6 +50,7 @@ bool conn_create( conn_t* conn ) {
 }
 
 void conn_destroy( conn_t* conn ) {
+  blob_destroy( &conn->otf_msg );
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
   blob_destroy( &conn->curr_packet );

@@ -7,7 +7,7 @@ bool test_blobs() {
   printf( "Tessting blobs...\n");
 
   blob_t b0;
-  blob_create( &b0, 6 );
+  blob_create( &b0, 6, 6 );
   bool is_valid = blob_is_valid( &b0 );
   assert( is_valid );
   blob_write_u32le( &b0, 0, 0x11223344 );
@@ -21,7 +21,7 @@ bool test_blobs() {
   assert( b0.data[5] == 0x55 );
 
   blob_t b1;
-  blob_create( &b1, 4 );
+  blob_create( &b1, 4, 4 );
   blob_write_u32le( &b1, 0, 0x88776655 );
   blob_dump( &b1 );
   uint32_t data_read = blob_read_u32le( &b1, 0 );
@@ -34,7 +34,7 @@ bool test_blobs() {
   assert( blob_read_u16le( &b0, 6 ) == 0x6655 );
 
   blob_t b2;
-  blob_create( &b2, 0 );
+  blob_create( &b2, 0, 0 );
   blob_remove_from_start( &b0, 2, &b2 );
   assert( blob_read_u16le( &b2, 0 ) == 0x3344 );
   blob_dump( &b2 );
@@ -63,7 +63,7 @@ void blob_from( blob_t* b, const char* hex_data ) {
   assert( ( n & 1 ) == 0 );
   int nbytes = n / 2;
   //printf( "%d bytes\n", nbytes );
-  blob_create( b, nbytes );
+  blob_create( b, nbytes, nbytes );
 
   p = hex_data;
   uint8_t* op = b->data;
@@ -167,7 +167,7 @@ bool test_get_obj(conn_t* c) {
   printf( "test_get_obj\n" );
   handle_t h = { .value = 0x88224411 };
   blob_t output;
-  blob_create( &output, 0 );
+  blob_create( &output, 0, 0 );
 
   int called = 0;
   callback_progress_t my_callback = { .context = &called, .callback = &callback_progress };

@@ -4,13 +4,14 @@
 #include <assert.h>
 #include "blob.h"
 
-void blob_create( blob_t* blob, uint32_t num_bytes ) {
-  if( num_bytes > 0 )
-    blob->data = malloc( num_bytes );
+void blob_create( blob_t* blob, uint32_t num_bytes, uint32_t bytes_to_reserve ) {
+  assert( num_bytes <= bytes_to_reserve );
+  if( bytes_to_reserve > 0 )
+    blob->data = malloc( bytes_to_reserve );
   else
     blob->data = NULL;
   blob->count = num_bytes;
-  blob->reserved = num_bytes;
+  blob->reserved = bytes_to_reserve;
 }
 
 void blob_reserve( blob_t* blob, uint32_t num_bytes ) {
