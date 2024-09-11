@@ -7,8 +7,11 @@
 // -------------------
 bool test_blobs();
 bool test_conn();
+bool test_channels();
 
 int main( int argc, char** argv ) {
+  if( !test_channels() )
+    return -1;
   if( !test_blobs() )
     return -1;
   if( !test_conn() )

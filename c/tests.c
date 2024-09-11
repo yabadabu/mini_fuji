@@ -1,5 +1,6 @@
 #include "blob.h"
 #include "connection.h"
+#include "channel.h"
 #include <assert.h>
 #include <stdio.h>      // printf
 
@@ -277,5 +278,16 @@ bool test_conn() {
   if( !test_get_obj(c) )
     return false;
 
+  return true;
+}
+
+bool test_channels() {
+  printf( "Testing channels...\n");
+  channel_t ch;
+  if( ch_open( &ch, "tcp:127.0.0.1:80") )
+    return false;
+
+  ch_close( &ch );
+  printf( "Testing channels OK\n");
   return true;
 }
