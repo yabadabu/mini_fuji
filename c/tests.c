@@ -91,23 +91,30 @@ void blob_from( blob_t* b, const char* hex_data ) {
 
 } 
 
+void send_end_of_packet( conn_t* c ) {
+  assert( conn_is_waiting_answer( c ) );
+  blob_t eoc;
+  blob_from( &eoc, "0c000000 0300 1510 05000000" );
+  conn_add_data( c, eoc.data, eoc.count );
+  conn_update( c );
+  assert( !conn_is_waiting_answer( c ) );
+}
+
 bool test_get_storage(conn_t* c) {
   printf( "test_get_storage\n" );
   conn_clear_state( c );
   // Send request
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
+  assert( conn_is_waiting_answer( c ) );
+
   // Fake network answer
   blob_t ans;
   blob_from( &ans, "18000000 0200 0410 05000000 020000000100001002000010");
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
 
-  // Simulate we recv the end of package from the camera
-  blob_t eoc;
-  blob_from( &eoc, "0c000000 0300 0410 05000000" );
-  conn_add_data( c, eoc.data, eoc.count );
-  conn_update( c );
+  send_end_of_packet( c );
 
   assert( storage_ids.count == 2 );
   assert( storage_ids.ids[0].storage_id == 0x10000001 );
@@ -127,6 +134,8 @@ bool test_get_prop(conn_t* c) {
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
 
+  send_end_of_packet( c );
+
   assert( c->recv_data.count == 0);
   assert( p.id == prop_quality.id );
   assert( p.val16 == 0x0001 );
@@ -139,6 +148,7 @@ bool test_set_prop(conn_t* c) {
   prop_t p = prop_quality;
   p.val16 = 2;
   ptpip_set_prop( c, &p );
+  send_end_of_packet( c );
   return true;
 }
 
@@ -146,6 +156,7 @@ bool test_initiate_capture(conn_t* c) {
   printf( "test_initiate_capture\n" );
   conn_clear_state( c );
   ptpip_initiate_capture( c );
+  send_end_of_packet( c );
   return true;
 }
 
@@ -153,6 +164,7 @@ bool test_initiate_open_capture(conn_t* c) {
   printf( "test_initiate_open_capture\n" );
   conn_clear_state( c );
   ptpip_initiate_open_capture( c );
+  send_end_of_packet( c );
   return true;
 }
 
@@ -160,6 +172,7 @@ bool test_terminate_capture(conn_t* c) {
   printf( "test_terminate_capture\n" );
   conn_clear_state( c );
   ptpip_terminate_capture( c );
+  send_end_of_packet( c );
   return true;
 }
 
@@ -168,6 +181,7 @@ bool test_del_obj(conn_t* c) {
   conn_clear_state( c );
   handle_t h = { .value = 0x88224411 };
   ptpip_del_obj( c, h );
+  send_end_of_packet( c );
   return true;
 }
 
@@ -202,9 +216,12 @@ bool test_get_obj(conn_t* c) {
   conn_update( c );
   assert( output.count == 8 );
   blob_dump( &output );
+
+  send_end_of_packet( c );
+
   assert( output.data[0] == 0x01 );
   assert( output.data[4] == 0x88 );
-  assert( called == 2 );
+  assert( called == 3 );
   return true;
 }
 

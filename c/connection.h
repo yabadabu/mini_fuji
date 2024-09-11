@@ -31,6 +31,7 @@ void conn_add_data( conn_t*, const void* new_data, uint32_t data_size );
 void conn_update( conn_t* );
 void conn_destroy( conn_t* conn );
 void conn_clear_state( conn_t* conn );
+bool conn_is_waiting_answer( conn_t* conn );
 
 // ---------------------------------------
 enum eValueType {

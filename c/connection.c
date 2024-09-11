@@ -4,6 +4,7 @@
 
 prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16 };
 
+// ------------------------------------------------------
 extern cmd_t cmd_open_session;
 extern cmd_t cmd_close_session;
 extern cmd_t cmd_initiate_capture;
@@ -49,6 +50,7 @@ bool conn_create( conn_t* conn ) {
 }
 
 void conn_destroy( conn_t* conn ) {
+  conn_clear_state( conn );
   blob_destroy( &conn->otf_msg );
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
@@ -68,7 +70,7 @@ uint32_t conn_next_msg_sequence( conn_t* conn) {
 }
 
 void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
-  printf( "Recv    %4d bytes\n", data_size );
+  printf( "Recv %4d bytes\n", data_size );
   blob_append_data( &conn->recv_data, new_data, data_size );
   
   if( conn->on_progress.callback ) {
@@ -81,7 +83,7 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
 }
 
 void conn_send( conn_t* conn, const blob_t* data ) {
-  printf( "Sending %4d bytes : ", blob_size( data ) );
+  printf( "Send " );
   blob_dump( data );
 }
 
@@ -97,6 +99,11 @@ uint32_t conn_next_packet_size( conn_t* conn ) {
   if( blob_size( &conn->recv_data ) >= 4 )
     return blob_read_u32le( &conn->recv_data, 0 );
   return 0;
+}
+
+bool conn_is_waiting_answer( conn_t* conn ) {
+  assert( conn );
+  return conn->curr_cmd != NULL;
 }
 
 void conn_dispatch( conn_t* conn, const blob_t* msg ) {
@@ -152,6 +159,7 @@ void conn_update( conn_t* conn ) {
   
 }
 
+// -------------------------------------------------------------
 void create_cmd_msg(  blob_t* msg, const cmd_t* cmd, uint16_t msg_type, uint32_t msg_seq_id, uint32_t payload_size ) {
   uint32_t msg_full_size = 4 + 2 + 2 + 4 + payload_size;
   blob_resize( msg, msg_full_size );
