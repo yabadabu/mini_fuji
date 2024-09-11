@@ -66,8 +66,8 @@ fs.readdir(directory_to_watch, (err, files) => {
       return;
     console.log( filename )
     const dir = path.basename(path.dirname(filename))
-    if( verbose )
-      console.log( filename, "=>", dir, dirs.includes( dir ))
+    //if( verbose )
+    //  console.log( filename, "=>", dir, dirs.includes( dir ))
     if( !dirs.includes( dir ))
       return;
     compile( eventType, filename, dir, true );

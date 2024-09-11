@@ -22,14 +22,15 @@ typedef struct {
   blob_t              otf_msg;
   uint32_t            sequence_id;
   cmd_t*              curr_cmd;
-  void*               curr_output;
+  void*               curr_output;    // Extra arg to provide in the parse fn
   callback_progress_t on_progress;
 } conn_t;
 
 bool conn_create( conn_t* );
 void conn_add_data( conn_t*, const void* new_data, uint32_t data_size );
 void conn_update( conn_t* );
-void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd_id );
+void conn_destroy( conn_t* conn );
+void conn_clear_state( conn_t* conn );
 
 // ---------------------------------------
 enum eValueType {
@@ -41,12 +42,12 @@ enum eValueType {
 };
 
 typedef struct { 
-  int16_t     id; 
-  const char* name;
+  int16_t          id; 
+  const char*      name;
   enum eValueType  data_type;
-  int16_t     val16;
-  int32_t     val32;
-  blob_t      blob;
+  int16_t          val16;
+  int32_t          val32;
+  blob_t           blob;
 } prop_t;
 
 // ---------------------------------------

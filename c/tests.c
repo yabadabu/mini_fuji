@@ -93,6 +93,7 @@ void blob_from( blob_t* b, const char* hex_data ) {
 
 bool test_get_storage(conn_t* c) {
   printf( "test_get_storage\n" );
+  conn_clear_state( c );
   // Send request
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
@@ -101,6 +102,13 @@ bool test_get_storage(conn_t* c) {
   blob_from( &ans, "18000000 0200 0410 05000000 020000000100001002000010");
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
+
+  // Simulate we recv the end of package from the camera
+  blob_t eoc;
+  blob_from( &eoc, "0c000000 0300 0410 05000000" );
+  conn_add_data( c, eoc.data, eoc.count );
+  conn_update( c );
+
   assert( storage_ids.count == 2 );
   assert( storage_ids.ids[0].storage_id == 0x10000001 );
   assert( storage_ids.ids[1].storage_id == 0x10000002 );
@@ -109,6 +117,7 @@ bool test_get_storage(conn_t* c) {
 
 bool test_get_prop(conn_t* c) {
   printf( "test_get_prop\n" );
+  conn_clear_state( c );
   prop_t p = prop_quality;
   ptpip_get_prop( c, &p );
 
@@ -117,6 +126,7 @@ bool test_get_prop(conn_t* c) {
   blob_dump( &ans );
   conn_add_data( c, ans.data, ans.count );
   conn_update( c );
+
   assert( c->recv_data.count == 0);
   assert( p.id == prop_quality.id );
   assert( p.val16 == 0x0001 );
@@ -125,6 +135,7 @@ bool test_get_prop(conn_t* c) {
 
 bool test_set_prop(conn_t* c) {
   printf( "test_set_prop\n" );
+  conn_clear_state( c );
   prop_t p = prop_quality;
   p.val16 = 2;
   ptpip_set_prop( c, &p );
@@ -133,25 +144,29 @@ bool test_set_prop(conn_t* c) {
 
 bool test_initiate_capture(conn_t* c) {
   printf( "test_initiate_capture\n" );
+  conn_clear_state( c );
   ptpip_initiate_capture( c );
   return true;
 }
 
 bool test_initiate_open_capture(conn_t* c) {
   printf( "test_initiate_open_capture\n" );
+  conn_clear_state( c );
   ptpip_initiate_open_capture( c );
   return true;
 }
 
 bool test_terminate_capture(conn_t* c) {
   printf( "test_terminate_capture\n" );
+  conn_clear_state( c );
   ptpip_terminate_capture( c );
   return true;
 }
 
 bool test_del_obj(conn_t* c) {
-  handle_t h = { .value = 0x88224411 };
   printf( "test_del_obj\n" );
+  conn_clear_state( c );
+  handle_t h = { .value = 0x88224411 };
   ptpip_del_obj( c, h );
   return true;
 }
@@ -165,6 +180,7 @@ static void callback_progress( void* context, float progress ) {
 
 bool test_get_obj(conn_t* c) {
   printf( "test_get_obj\n" );
+  conn_clear_state( c );
   handle_t h = { .value = 0x88224411 };
   blob_t output;
   blob_create( &output, 0, 0 );
@@ -192,6 +208,20 @@ bool test_get_obj(conn_t* c) {
   return true;
 }
 
+bool test_close_session( conn_t* c ) {
+  conn_clear_state( c );
+  ptpip_close_session( c );
+  printf( "ptpip_close_session\n");
+  return true;
+}
+
+bool test_open_session( conn_t* c ) {
+  conn_clear_state( c );
+  ptpip_open_session( c );
+  printf( "Test open session\n" );
+  return true;
+}
+
 bool test_conn() {
   printf( "Testing connections...\n");
   conn_t conn;
@@ -201,13 +231,12 @@ bool test_conn() {
   conn_update( c );
   printf( "update complete\n");
   
-  ptpip_close_session( c );
-  printf( "ptpip_close_session\n");
-  ptpip_open_session( c );
-  printf( "Test open session\n" );
+  if( !test_close_session( c ))
+    return false;
 
-  printf( "basic msgs complete\n");
-  
+  if( !test_open_session( c ))
+    return false;
+
   if( !test_get_storage(c) )
     return false;
 
@@ -232,8 +261,5 @@ bool test_conn() {
   if( !test_get_obj(c) )
     return false;
 
-  // blob_t msg_open_session;
-  // conn_create_cmd_msg( &conn, &msg_open_session, &cmd_open_session );
-  // blob_dump( &msg_open_session );
   return true;
 }

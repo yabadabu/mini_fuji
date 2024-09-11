@@ -40,10 +40,9 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->curr_packet, 0, 256 );
   blob_create( &conn->last_answer, 0, 256 );
   blob_create( &conn->otf_msg, 0, 256 );
-  
+
   conn->sequence_id = 1;
-  conn->curr_output = NULL;
-  conn->curr_cmd = NULL;
+  conn_clear_state( conn );
 
   callback_clear( &conn->on_progress );
   return true;
@@ -54,6 +53,13 @@ void conn_destroy( conn_t* conn ) {
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
   blob_destroy( &conn->curr_packet );
+}
+
+void conn_clear_state( conn_t* conn ) {
+  conn->curr_output = NULL;
+  conn->curr_cmd = NULL;
+  blob_clear( &conn->otf_msg );
+  callback_clear( &conn->on_progress );
 }
 
 uint32_t conn_next_msg_sequence( conn_t* conn) {
@@ -105,18 +111,33 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   uint16_t cmd_id = blob_read_u16le( msg, 6 );
   uint16_t seq_id = blob_read_u32le( msg, 8 );
   printf( "%d bytes %04x %04x %08x CurrCmd:%s\n", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
+
   if( conn->curr_cmd ) {
+    // expect cmd_id == otf_msg->cmd_id
+    assert( msg_type == msg_type_data || msg_type == msg_type_end );
+
+    // Send the extra bytes to the current cmd to parse
+    // Sometimes there is data as part of the msg_type_end msg type
     blob_t args;
     args.data = msg->data + offset_payload;
     args.count = packet_size - offset_payload;
     args.reserved = 0;
-    conn->curr_cmd->parse( &args, conn->curr_output );
+    if( args.count > 0 )
+      conn->curr_cmd->parse( &args, conn->curr_output );
+
+    // The command is over?
+    if( msg_type == msg_type_end )
+      conn_clear_state( conn );
+
   } 
 
-  callback_clear( &conn->on_progress );
 }
 
 int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output_data) {
+  
+  // Previous transaction should have been finished
+  assert( conn->curr_cmd == NULL );
+
   conn_send( conn, data );
   conn->curr_output = output_data;
   conn->curr_cmd = cmd;
