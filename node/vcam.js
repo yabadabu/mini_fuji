@@ -37,7 +37,7 @@ SERVICE: PCSS/1.0
 
   // Connect to the client-ip and using tcp tell him our ip
   const my_ip = "192.168.1.136"
-  const ans = `NOTIFY * HTTP/1.1\r\nDSC: ${my_ip}\r\nCAMERANAME: X-T2\r\nDSCPORT: 15740\r\nMX: 7\r\nSERVICE: PCSS/1.0\r\n`
+  const ans = `NOTIFY * HTTP/1.1\r\nDSC: ${my_ip}\r\nCAMERANAME: X-T2\r\nDSCPORT: ${port}\r\nMX: 7\r\nSERVICE: PCSS/1.0\r\n`
   connectToClient( ip_asking, 51560, ans )
 })
 

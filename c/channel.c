@@ -97,8 +97,8 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
   strncpy( ip, str_ip, str_port - str_ip );
   str_port += 1;
   int port = atoi( str_port );
-  printf( "IP: %s\n", ip );
-  printf( "Port: %d\n", port );
+  //printf( "IP: %s\n", ip );
+  //printf( "Port: %d\n", port );
 
   int sockfd = 0;
   if( strncmp( conn_info, "udp:", 4 ) == 0 ) {
@@ -206,6 +206,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
         perror("connect");
         close(sockfd);
         return false;
+
       } else {
         printf("Connecting...\n");
       }
@@ -310,28 +311,19 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   FD_SET(server->fd, &fds);
 
   struct timeval tv = {usecs / 1000000, usecs % 1000000};
-  printf( "Waiting for accept: %ld:%d\n", tv.tv_sec, tv.tv_usec);
 
   int ret = select(server->fd + 1, &fds, NULL, NULL, &tv);
-  printf( "Select rc:%d\n", ret );
-  if (ret < 0) {
-    perror("select");
-    printf( "Select failed\n" );
+  if (ret < 0)
     return false;
-  }
 
-  if( ret == 0 ) {
-    printf( "No one is connecting...\n" );
+  if( ret == 0 )
     return false;
-  }
 
   struct sockaddr_storage sa;
   socklen_t sa_sz = sizeof(sa);
   int new_fd = accept( server->fd, (struct sockaddr*)&sa, (socklen_t*) &sa_sz );
-  if( new_fd < 0 ) {
-    printf( "Accept failed\n" );
+  if( new_fd < 0 )
     return false;
-  }
 
   set_non_blocking_socket( new_fd );
 
