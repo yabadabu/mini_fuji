@@ -60,6 +60,12 @@ const server = net.createServer((socket) => {
           console.log( "This is the PTP initialize cmd\n");
           const answer1 = Buffer.from("4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000", "hex");
           const n = socket.write(answer1);
+        
+        } else if( cmd == 0x10040001 ) { // This is a get_storages
+          console.log( "This is the PTP get_storages cmd\n");
+          const answer1 = Buffer.from("1800000002000410050000000200000001000010020000100c0000000300012005000000", "hex");
+          const n = socket.write(answer1);
+        
         } else {
           console.log( "Unexpected cmd", data.toString("hex") );
           //console.log( "Answering", result, n )

@@ -312,6 +312,14 @@ void show_waiting_answer() {
   idx = ( idx + 1 ) % 4;
 }
 
+void wait_until_cmd_processed( conn_t* c) {
+  while( conn_is_waiting_answer( c ) ) {
+    conn_update( c, 100000 );
+    show_waiting_answer();
+  }
+  printf( "\n");
+}
+
 bool test_channels() {
   printf( "Testing channels...\n");
 
@@ -336,19 +344,23 @@ bool test_channels() {
   conn_create( c );
   conn.channel = ch;
 
-  // set socket
   // set camera info?
 
   ptpip_initialize( c );
+  wait_until_cmd_processed( c );
 
-  while( onn_is_waiting_answer( c ) ) {
-    conn_update( c, 100000 );
-    show_waiting_answer();
-  }
   printf( "Iniitalization complete\n" );
 
-  conn_destroy( c );
+  storage_ids_t storage_ids;
+  ptpip_get_storage_ids( c, &storage_ids );
+  wait_until_cmd_processed( c );
+
+  printf( "%d storages found\n", storage_ids.count );
+  for( int i=0; i<storage_ids.count; ++i ) 
+    printf( "    ID:%08x\n", storage_ids.ids[i] );
+
   ch_close( ch );
+  conn_destroy( c );
 
 /*
   printf( "Writing\n" );
