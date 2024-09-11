@@ -182,7 +182,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
 
     // Enable the broadcast option
     bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
-    if( is_broadcast && !set_udp_broadcast( sockfd ) )
+    if( is_broadcast && !set_udp_broadcast( sockfd ) ) {
       close(sockfd);
       return false;
     }
@@ -264,7 +264,6 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
       return false;
     }
   }
-
 
   ch->port = port;
   ch->fd = sockfd;
