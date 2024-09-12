@@ -163,7 +163,7 @@ bool blob_is_valid( const blob_t* blob ) {
 
 void blob_dump( const blob_t* blob ) {
   printf( "%4d / %4d %p : ", blob->count, blob->reserved, blob->data );
-  for( int i=0; i<blob->count; ++i ) {
+  for( uint32_t i=0; i<blob->count; ++i ) {
     printf( "%02x ", blob->data[i] );
     // if( (i+1) % 16 == 0)
     //   printf( "\n");
