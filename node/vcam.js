@@ -2,7 +2,7 @@ const net = require("net");
 var udp = require('dgram');
 
 const port = 5001;
-const my_ip = "192.168.1.139"
+const my_ip = "192.168.1.136"
 
 function connectToClient( ip, port, msg ) {
   const client = new net.Socket();

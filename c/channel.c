@@ -265,7 +265,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
         int no = 0;
         if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no)) != 0) {
           perror("setsockopt IPV6_V6ONLY failed");
-          closesocket(sockfd);
+          sys_close(sockfd);
           continue;
         }
       }
