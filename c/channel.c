@@ -15,8 +15,49 @@
 
 #include <WinSock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
+#pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #define socklen_t int
+
+int reportLocalIPs() {
+  ULONG outBufLen = 15000;
+  PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
+  if (pAddresses == NULL) {
+    printf("Memory allocation failed\n");
+    return -1;
+  }
+
+  DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
+  if (dwRetVal == NO_ERROR) {
+    PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
+    while (pCurrAddresses) {
+      char friendly_name[256]; size_t n = 0;
+      wcstombs_s(&n, friendly_name, sizeof(friendly_name), pCurrAddresses->FriendlyName, 128);
+      char description[256];
+      wcstombs_s(&n, description, sizeof(description), pCurrAddresses->Description, 128);
+      printf("Adapter name: %s (%s) : %s\n", friendly_name, description, pCurrAddresses->AdapterName);
+      PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
+      while (pUnicast != NULL) {
+        SOCKADDR* sa = pUnicast->Address.lpSockaddr;
+        if (sa->sa_family == AF_INET) {
+          char str[INET_ADDRSTRLEN];
+          inet_ntop(AF_INET, &(((struct sockaddr_in*)sa)->sin_addr), str, INET_ADDRSTRLEN);
+          printf("IPv4 Address: %s\n", str);
+        }
+        pUnicast = pUnicast->Next;
+      }
+      pCurrAddresses = pCurrAddresses->Next;
+    }
+  }
+  else {
+    printf("GetAdaptersAddresses failed with error: %lu\n", dwRetVal);
+  }
+
+  free(pAddresses);
+  return 0;
+}
+
 
 #else
 
@@ -160,6 +201,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
     WORD wVersionRequested = MAKEWORD(2, 2);
     int wsaerr = WSAStartup(wVersionRequested, &wsaData);
     assert(wsaerr == 0);
+    reportLocalIPs();
     global_initialization = true;
   }
 
@@ -406,7 +448,6 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
 
 
 
-
 /*
 
 get local ip in windows
@@ -417,41 +458,7 @@ get local ip in windows
 #include <stdio.h>
 #include <stdlib.h>
 
-#pragma comment(lib, "iphlpapi.lib")
-#pragma comment(lib, "ws2_32.lib")
 
-int main() {
-    ULONG outBufLen = 15000;
-    PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES *)malloc(outBufLen);
-    if (pAddresses == NULL) {
-        printf("Memory allocation failed\n");
-        return 1;
-    }
-
-    DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
-    if (dwRetVal == NO_ERROR) {
-        PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
-        while (pCurrAddresses) {
-            printf("Adapter name: %s\n", pCurrAddresses->AdapterName);
-            PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
-            while (pUnicast != NULL) {
-                SOCKADDR *sa = pUnicast->Address.lpSockaddr;
-                if (sa->sa_family == AF_INET) {
-                    char str[INET_ADDRSTRLEN];
-                    inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), str, INET_ADDRSTRLEN);
-                    printf("IPv4 Address: %s\n", str);
-                }
-                pUnicast = pUnicast->Next;
-            }
-            pCurrAddresses = pCurrAddresses->Next;
-        }
-    } else {
-        printf("GetAdaptersAddresses failed with error: %lu\n", dwRetVal);
-    }
-
-    free(pAddresses);
-    return 0;
-}
 
 get local ip in unix
 
