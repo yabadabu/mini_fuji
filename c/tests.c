@@ -337,33 +337,28 @@ bool test_channels() {
   strcat(conn_str, camera_info.ip);
   printf( "Connecting to >>%s<<\n", conn_str );
 
-  channel_t channel;
-  channel_t* ch = &channel;
-  if( !ch_create( ch, conn_str, camera_info.port) )
-    return false;
   printf( "Connected\n" );
 
   conn_t conn;
   conn_t* c = &conn;
-  conn_create( c );
-  conn.channel = ch;
-
   // set camera info?
+  conn_create( c );
+
+  // Connect to the camera using the conn channel
+  if( !ch_create( &c->channel, conn_str, camera_info.port) )
+    return false;
 
   ptpip_initialize( c );
   wait_until_cmd_processed( c );
-
   printf( "Iniitalization complete\n" );
 
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
   wait_until_cmd_processed( c );
-
   printf( "%d storages found\n", storage_ids.count );
   for( int i=0; i<storage_ids.count; ++i ) 
     printf( "    ID:%08x\n", storage_ids.ids[i].id );
 
-  ch_close( ch );
   conn_destroy( c );
 
 /*

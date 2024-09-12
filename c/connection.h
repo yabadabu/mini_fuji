@@ -27,7 +27,7 @@ typedef struct {
   cmd_t*              curr_cmd;
   void*               curr_output;    // Extra arg to provide in the parse fn
   callback_progress_t on_progress;
-  channel_t*          channel;
+  channel_t           channel;
 } conn_t;
 
 bool conn_create( conn_t* );

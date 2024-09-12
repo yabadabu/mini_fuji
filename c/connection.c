@@ -47,7 +47,6 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->otf_msg, 0, 256 );
   blob_create( &conn->net_buffer, 0, 32768 );
 
-  conn->channel = NULL;
   conn->sequence_id = 1;
   conn_clear_state( conn );
 
@@ -62,6 +61,7 @@ void conn_destroy( conn_t* conn ) {
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
   blob_destroy( &conn->curr_packet );
+  ch_close( &conn->channel );
 }
 
 void conn_clear_state( conn_t* conn ) {
@@ -91,10 +91,9 @@ void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
 }
 
 void conn_send( conn_t* conn, const blob_t* blob ) {
-  printf( "Send %p ", conn->channel );
+  printf( "Send " );
   blob_dump( blob );
-  if( conn->channel )
-    ch_write( conn->channel, blob->data, blob_size( blob ) );
+  ch_write( &conn->channel, blob->data, blob_size( blob ) );
 }
 
 bool conn_has_packet_ready( conn_t* conn, uint32_t* packet_size ) {
@@ -167,7 +166,7 @@ int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output
 
 void conn_update( conn_t* conn, int usecs ) {
 
-  if( conn->channel && ch_read_blob( conn->channel, &conn->net_buffer, usecs ) )
+  if( ch_read_blob( &conn->channel, &conn->net_buffer, usecs ) )
     conn_add_data( conn, conn->net_buffer.data, conn->net_buffer.count );
 
   uint32_t required_bytes = 0;

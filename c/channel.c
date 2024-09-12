@@ -176,7 +176,7 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   return rc;
 }
 
-static void ch_clean( channel_t* ch ) {
+void ch_clean( channel_t* ch ) {
   // Clear to some sane values
   ch->fd = 0;
   ch->is_udp = false;
