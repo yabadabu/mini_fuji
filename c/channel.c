@@ -8,6 +8,8 @@
 #ifdef _WIN32
 
 #define sys_close               closesocket
+#define sys_recv                recv
+#define sys_send                send
 #define CH_ERR_WOULD_BLOCK      WSAEWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS WSAEWOULDBLOCK
 
@@ -33,6 +35,8 @@
 #include <netdb.h>
 
 #define sys_close               close
+#define sys_recv                recv
+#define sys_send                send
 #define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
 
@@ -42,7 +46,7 @@
 
 static const char* broadcast_ip = "255.255.255.255";
 
-static int set_non_blocking_socket(int sockfd) {
+static int set_non_blocking_socket(socket_t sockfd) {
 
 #if defined(O_NONBLOCK)
 
@@ -72,23 +76,23 @@ static int set_non_blocking_socket(int sockfd) {
   return 0;
 }
 
-static void set_tcp_no_delay( int sockfd ) {
+static void set_tcp_no_delay(socket_t sockfd ) {
   int flag = 1;
-  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) < 0) {
+  if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(int)) < 0) {
     perror("setsockopt(TCP_NODELAY) failed");
   }
 }
 
-static void set_reuse_addr( int sockfd ) {
+static void set_reuse_addr(socket_t sockfd ) {
   int optval = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval)) < 0) {
     perror("setsockopt");
   }
 }
 
-static bool set_udp_broadcast( int sockfd ) {
+static bool set_udp_broadcast(socket_t sockfd ) {
   int broadcast_permission = 1;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_permission, sizeof(broadcast_permission)) < 0) {
+  if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast_permission, sizeof(broadcast_permission)) < 0) {
     perror("setsockopt (SO_BROADCAST)");
     return false;
   }
@@ -147,20 +151,32 @@ static void ch_clean( channel_t* ch ) {
 // tcp_server:0.0.0.0:4800  -> tcp server at port 4800
 // udp:0.0.0.0:4700         -> Broadcast udp to port 4700
 bool ch_create( channel_t* ch, const char* conn_info, int port ) {
+
+#ifdef _WIN32
+
+  static bool global_initialization = false;
+  if (!global_initialization) {
+    WSADATA wsaData;
+    WORD wVersionRequested = MAKEWORD(2, 2);
+    int wsaerr = WSAStartup(wVersionRequested, &wsaData);
+    assert(wsaerr == 0);
+    global_initialization = true;
+  }
+
+#endif
+
   assert( ch );
   assert( conn_info );
 
   // Clear to some sane values
   ch_clean( ch );
 
-  const char* str_ip = strchr( conn_info, ':' ) + 1;
+  const char* ip = strchr( conn_info, ':' ) + 1;
 
-  char ip[32];
-  memset( ip, 0x00, sizeof(ip));
   //printf( "IP: %s\n", ip );
   //printf( "Port: %d\n", port );
 
-  int sockfd = 0;
+  socket_t sockfd = 0;
   if( strncmp( conn_info, "udp:", 4 ) == 0 ) {
     ch->is_udp = true;
 
@@ -183,9 +199,9 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
     struct addrinfo hints, *servinfo, *p;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;    // No effect if bindaddr != NULL
+    hints.ai_flags = AI_PASSIVE;    // Use with NULL for bind
 
     char str_port[32];
     sprintf(str_port, "%d", port);
@@ -200,9 +216,19 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
         continue;
 
-      set_reuse_addr( sockfd );
+      set_reuse_addr(sockfd);
 
-      if (bind(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
+      // Disable the default behavior where an IPv6 socket only accepts IPv6 connections
+      if (p->ai_family == AF_INET6) {
+        int no = 0;
+        if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no)) != 0) {
+          perror("setsockopt IPV6_V6ONLY failed");
+          closesocket(sockfd);
+          continue;
+        }
+      }
+
+      if (bind(sockfd, p->ai_addr, (int)p->ai_addrlen) < 0) {
         perror( "bind failed");
         sys_close(sockfd);
         continue;
@@ -265,7 +291,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
 int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
   uint8_t* obuf = (uint8_t*) out_buffer;
-  int sockfd = ch->fd;
+  socket_t sockfd = ch->fd;
   uint32_t total_bytes_read = 0;
 
   // Max time to wait for an answer
@@ -278,13 +304,13 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
       FD_ZERO(&read_fds);
       FD_SET(sockfd, &read_fds);
 
-      int ret = select(sockfd + 1, &read_fds, NULL, NULL, &tv);
+      int ret = select((int)(sockfd + 1), &read_fds, NULL, NULL, &tv);
       if (ret < 0) {
           perror("select");
           return -1;
 
       } else if (ret > 0 && FD_ISSET(sockfd, &read_fds)) {
-          int bytes_read = read(sockfd, obuf, max_length - total_bytes_read);
+          int bytes_read = sys_recv(sockfd, obuf, max_length - total_bytes_read, 0);
           if (bytes_read < 0) {
               if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
                   break;
@@ -309,7 +335,7 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
 
 int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
   const uint8_t* ibuf = (uint8_t*)buffer;
-  int sockfd = ch->fd;
+  socket_t sockfd = ch->fd;
   int total_bytes_written = 0;
 
   while (total_bytes_written < (int)length) {
@@ -319,13 +345,13 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
       FD_ZERO(&write_fds);
       FD_SET(sockfd, &write_fds);
 
-      int ret = select(sockfd + 1, NULL, &write_fds, NULL, NULL);
+      int ret = select((int)(sockfd + 1), NULL, &write_fds, NULL, NULL);
       if (ret < 0) {
           perror("select");
           return -1;
 
       } else if (ret > 0 && FD_ISSET(sockfd, &write_fds)) {
-          int bytes_written = write(sockfd, ibuf, length - total_bytes_written);
+          int bytes_written = sys_send(sockfd, ibuf, length - total_bytes_written, 0);
           if (bytes_written < 0) {
               if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
                   break;
@@ -356,7 +382,7 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
 
   struct timeval tv = {usecs / 1000000, usecs % 1000000};
 
-  int ret = select(server->fd + 1, &fds, NULL, NULL, &tv);
+  int ret = select((int)(server->fd + 1), &fds, NULL, NULL, &tv);
   if (ret < 0)
     return false;
 
@@ -365,7 +391,7 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
 
   struct sockaddr_storage sa;
   socklen_t sa_sz = sizeof(sa);
-  int new_fd = accept( server->fd, (struct sockaddr*)&sa, (socklen_t*) &sa_sz );
+  socket_t new_fd = accept( server->fd, (struct sockaddr*)&sa, (socklen_t*) &sa_sz );
   if( new_fd < 0 )
     return false;
 

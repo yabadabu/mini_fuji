@@ -327,7 +327,7 @@ bool test_channels() {
 
   camera_info_t camera_info;
   //const char* my_ip = "172.19.198.229";
-  const char* my_ip = "192.168.1.136";
+  const char* my_ip = "172.19.192.1";
   discovery_start( my_ip );
   while( !discovery_update( &camera_info, 5 * 1000 ) )
     printf( "Searching camera in %s...\n", my_ip);

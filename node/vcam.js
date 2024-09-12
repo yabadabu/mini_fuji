@@ -2,6 +2,7 @@ const net = require("net");
 var udp = require('dgram');
 
 const port = 5001;
+const my_ip = "192.168.1.139"
 
 function connectToClient( ip, port, msg ) {
   const client = new net.Socket();
@@ -36,7 +37,6 @@ SERVICE: PCSS/1.0
   console.log( "IP Asking is", ip_asking)
 
   // Connect to the client-ip and using tcp tell him our ip
-  const my_ip = "192.168.1.136"
   const ans = `NOTIFY * HTTP/1.1\r\nDSC: ${my_ip}\r\nCAMERANAME: X-T2\r\nDSCPORT: ${port}\r\nMX: 7\r\nSERVICE: PCSS/1.0\r\n`
   connectToClient( ip_asking, 51560, ans )
 })

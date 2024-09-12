@@ -3,19 +3,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef _WIN32
+typedef unsigned __int64 socket_t;
+#else
+typedef int              socket_t;
+#endif
+
 typedef struct {
-
-// #ifdef _WIN32
-//       typedef SOCKET TOSSocket;
-// #else
-//       typedef int    TOSSocket;
-// #endif
-
-  int  fd;
-  bool is_udp;
-  bool is_broadcast;
-  bool is_server;
-  int  port;
+  socket_t fd;
+  bool     is_udp;
+  bool     is_broadcast;
+  bool     is_server;
+  int      port;
 } channel_t;
 
 bool ch_create( channel_t* ch, const char* conn_info, int port );
