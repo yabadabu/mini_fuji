@@ -295,7 +295,7 @@ int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out
   blob_t* msg = &conn->otf_msg;
   uint32_t msg_seq_id = conn_next_msg_sequence( conn );
   create_cmd_msg( msg, &cmd_get_obj_handles, msg_type_cmd, msg_seq_id, 12 );
-  blob_write_u32le( msg, offset_payload + 0, storage_id.storage_id );
+  blob_write_u32le( msg, offset_payload + 0, storage_id.id );
   blob_write_u32le( msg, offset_payload + 4, 0 );
   blob_write_u32le( msg, offset_payload + 8, 0xffffffff );
   conn_transaction( conn, msg, &cmd_get_obj_handles, out_handles );

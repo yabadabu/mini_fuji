@@ -99,8 +99,8 @@ bool test_get_storage(conn_t* c) {
   send_end_of_packet( c );
 
   assert( storage_ids.count == 2 );
-  assert( storage_ids.ids[0].storage_id == 0x10000001 );
-  assert( storage_ids.ids[1].storage_id == 0x10000002 );
+  assert( storage_ids.ids[0].id == 0x10000001 );
+  assert( storage_ids.ids[1].id == 0x10000002 );
   return true;
 }
 
@@ -357,7 +357,7 @@ bool test_channels() {
 
   printf( "%d storages found\n", storage_ids.count );
   for( int i=0; i<storage_ids.count; ++i ) 
-    printf( "    ID:%08x\n", storage_ids.ids[i] );
+    printf( "    ID:%08x\n", storage_ids.ids[i].id );
 
   ch_close( ch );
   conn_destroy( c );

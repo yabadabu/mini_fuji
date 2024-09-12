@@ -57,7 +57,7 @@ typedef struct {
 
 // ---------------------------------------
 typedef struct {
-  uint32_t storage_id;
+  uint32_t id;
 } storage_id_t;
 
 typedef struct { 

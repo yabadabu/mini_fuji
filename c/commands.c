@@ -62,7 +62,7 @@ int parse_get_storage_ids( const blob_t* args, void* output ) {
     out_ids->count = 3;
   for( uint32_t i=0; i<out_ids->count; ++i ) {
     uint32_t id = blob_read_u32le( args, 4 + i * 4 );
-    out_ids->ids[i].storage_id = id;
+    out_ids->ids[i].id = id;
   }
   return 0; 
 }
