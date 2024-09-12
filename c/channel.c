@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>      // printf
@@ -9,7 +11,10 @@
 #define CH_ERR_WOULD_BLOCK      WSAEWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS WSAEWOULDBLOCK
 
+#include <WinSock2.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
+#define socklen_t int
 
 #else
 
@@ -38,6 +43,9 @@
 static const char* broadcast_ip = "255.255.255.255";
 
 static int set_non_blocking_socket(int sockfd) {
+
+#if defined(O_NONBLOCK)
+
   // Get the current file descriptor flags
   int flags = fcntl(sockfd, F_GETFL, 0);
   if (flags == -1) {
@@ -52,23 +60,14 @@ static int set_non_blocking_socket(int sockfd) {
       return -1;
   }
 
-/*
-     bool setNonBlocking( TSocket sock ) {
-        // set non-blocking
-#if defined(O_NONBLOCK)
-        int flags = fcntl(sock.s, F_GETFL, 0);
-        if (flags == -1)
-          flags = 0;
-        auto rc = fcntl(sock.s, F_SETFL, flags | O_NONBLOCK);
 #else
-        u_long iMode = 1;
-        auto rc = ioctlsocket(sock.s, FIONBIO, &iMode);
+
+  u_long iMode = 1;
+  auto rc = ioctlsocket(sockfd, FIONBIO, &iMode);
+  if (rc)
+    return false;
+
 #endif
-        if (rc != 0)
-          dbg("Failed to set socket %d as non-blocking\n", sock.s);
-        return rc == 0;
-      }
-      */
 
   return 0;
 }
@@ -147,7 +146,7 @@ static void ch_clean( channel_t* ch ) {
 // tcp:192.168.1.27:8080    -> tcp client connection to server at port 192.168.1.27:8080
 // tcp_server:0.0.0.0:4800  -> tcp server at port 4800
 // udp:0.0.0.0:4700         -> Broadcast udp to port 4700
-bool ch_create( channel_t* ch, const char* conn_info ) {
+bool ch_create( channel_t* ch, const char* conn_info, int port ) {
   assert( ch );
   assert( conn_info );
 
@@ -155,18 +154,9 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
   ch_clean( ch );
 
   const char* str_ip = strchr( conn_info, ':' ) + 1;
-  const char* str_port = strchr( str_ip, ':' );
-  if( !str_port ) {
-    errno = ECANCELED;
-    perror( "Failed to identify port number in conn_info");
-    return false;
-  }
 
   char ip[32];
   memset( ip, 0x00, sizeof(ip));
-  strncpy( ip, str_ip, str_port - str_ip );
-  str_port += 1;
-  int port = atoi( str_port );
   //printf( "IP: %s\n", ip );
   //printf( "Port: %d\n", port );
 
@@ -183,7 +173,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
     // Enable the broadcast option
     bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
     if( is_broadcast && !set_udp_broadcast( sockfd ) ) {
-      close(sockfd);
+      sys_close(sockfd);
       return false;
     }
 
@@ -196,6 +186,9 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;    // No effect if bindaddr != NULL
+
+    char str_port[32];
+    sprintf(str_port, "%d", port);
 
     if (getaddrinfo(ip, str_port, &hints, &servinfo) != 0) {
       perror( "getaddrinfo" );
@@ -211,13 +204,13 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
 
       if (bind(sockfd, p->ai_addr, p->ai_addrlen) < 0) {
         perror( "bind failed");
-        close(sockfd);
+        sys_close(sockfd);
         continue;
       }
       
       if (listen(sockfd, 5) < 0) {
         perror( "listen failed" );
-        close(sockfd);
+        sys_close(sockfd);
         continue;
       }
 
@@ -239,7 +232,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
 
     struct sockaddr_in remote_addr;
     if( !ch_make_address( &remote_addr, ip, port )) {
-      close(sockfd);
+      sys_close(sockfd);
       return false;
     }
 
@@ -247,7 +240,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
       if (errno != EINPROGRESS) {
         // EINPROGRESS indicates that the connection is in progress in non-blocking mode
         perror("connect");
-        close(sockfd);
+        sys_close(sockfd);
         return false;
 
       } else {
@@ -260,7 +253,7 @@ bool ch_create( channel_t* ch, const char* conn_info ) {
 
   if( !ch->is_udp ) {
     if (set_non_blocking_socket(sockfd) < 0) {
-      close(sockfd);
+      sys_close(sockfd);
       return false;
     }
   }
@@ -315,6 +308,7 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
 }
 
 int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
+  const uint8_t* ibuf = (uint8_t*)buffer;
   int sockfd = ch->fd;
   int total_bytes_written = 0;
 
@@ -331,7 +325,7 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
           return -1;
 
       } else if (ret > 0 && FD_ISSET(sockfd, &write_fds)) {
-          int bytes_written = write(sockfd, buffer + total_bytes_written, length - total_bytes_written);
+          int bytes_written = write(sockfd, ibuf, length - total_bytes_written);
           if (bytes_written < 0) {
               if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
                   break;
@@ -342,6 +336,7 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
               }
           }
           total_bytes_written += bytes_written;
+          ibuf += bytes_written;
       }
   }
 

@@ -27,7 +27,7 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
 // "192.168.1.136"
 bool discovery_start( const char* local_ip ) {
   blob_create( &ds.buff, 0, 1024 );
-  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255:5002") )
+  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", 5002) )
     return false;
 
   // Msg to the cameras my identify. prefix + ip + suffix
@@ -35,12 +35,12 @@ bool discovery_start( const char* local_ip ) {
   const char* suffix = "\r\nMX: 5\r\nSERVICE: PCSS/1.0\r\n";
   blob_t* msg = &ds.discovery_msg;
   blob_create( msg, 0, 512 );
-  blob_append_data( msg, prefix, strlen( prefix ) );
-  blob_append_data( msg, local_ip, strlen( local_ip ) );
-  blob_append_data( msg, suffix, strlen( suffix ) );
+  blob_append_data( msg, prefix, (uint32_t)strlen( prefix ) );
+  blob_append_data( msg, local_ip, (uint32_t)strlen( local_ip ) );
+  blob_append_data( msg, suffix, (uint32_t)strlen( suffix ) );
 
   // The camera will connect to this address via tcp and send his information
-  if( !ch_create( &ds.ch_discovery, "tcp_server:0.0.0.0:51560") )
+  if( !ch_create( &ds.ch_discovery, "tcp_server:0.0.0.0", 51560) )
     return false;
   assert( ds.ch_discovery.port = 51560 );
 
@@ -78,11 +78,11 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
     memset( out_camera, 0x00, sizeof( camera_info_t ));
 
     // Parse the results
-    const char* q0 = (const char*) ds.buff.data;
+    char* q0 = (char*) ds.buff.data;
     uint32_t msg_size = blob_size( &ds.buff );
-    const char* q = q0;
+    char* q = q0;
     while( q && ( q - q0 < msg_size ) ) {
-      const char* eol = strchr( q, '\r' );
+      char* eol = strchr( q, '\r' );
       if( !eol )
         break;
 
@@ -90,13 +90,14 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
       if( !sep )
         break;
       sep += 2;
-
-      if( strncmp( q, "DSCPORT: ", 9 ) == 0 ) 
-        out_camera->port = atoi( sep );
-      else if( strncmp( q, "DSC: ", 5 ) == 0 )
-        strncpy( out_camera->ip, sep, eol - sep );
-      else if( strncmp( q, "CAMERANAME: ", 12 ) == 0 )
-        strncpy( out_camera->name, sep, eol - sep );
+      if (eol - sep > 0) {
+        if( strncmp( q, "DSCPORT: ", 9 ) == 0 ) 
+          out_camera->port = atoi( sep );
+        else if( strncmp( q, "DSC: ", 5 ) == 0 )
+          memcpy( out_camera->ip, sep, eol - sep);
+        else if( strncmp( q, "CAMERANAME: ", 12 ) == 0 )
+          memcpy( out_camera->name, sep, eol - sep);
+      }
       q = eol + 2;
     }
 

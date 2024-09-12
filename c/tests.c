@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "blob.h"
 #include "connection.h"
 #include "channel.h"
@@ -289,7 +291,7 @@ bool test_conn() {
 bool test_channel_accept() {
 
   channel_t ch_server;
-  if( !ch_create( &ch_server, "tcp_server:127.0.0.1:40000"))
+  if( !ch_create( &ch_server, "tcp_server:127.0.0.1", 40000))
     return false;
 
   while( true ) {
@@ -324,18 +326,20 @@ bool test_channels() {
   printf( "Testing channels...\n");
 
   camera_info_t camera_info;
-  discovery_start( "192.168.1.136" );
+  //const char* my_ip = "172.19.198.229";
+  const char* my_ip = "192.168.1.136";
+  discovery_start( my_ip );
   while( !discovery_update( &camera_info, 5 * 1000 ) )
-    printf( "Searching camera...\n");
+    printf( "Searching camera in %s...\n", my_ip);
   discovery_stop();
 
-  char conn_str[128];
-  sprintf( conn_str, "tcp:%s:%d", camera_info.ip, camera_info.port );
+  char conn_str[128] = {"tcp:"};
+  strcat(conn_str, camera_info.ip);
   printf( "Connecting to >>%s<<\n", conn_str );
 
   channel_t channel;
   channel_t* ch = &channel;
-  if( !ch_create( ch, conn_str) )
+  if( !ch_create( ch, conn_str, camera_info.port) )
     return false;
   printf( "Connected\n" );
 

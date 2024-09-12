@@ -18,7 +18,7 @@ typedef struct {
   int  port;
 } channel_t;
 
-bool ch_create( channel_t* ch, const char* conn_info );
+bool ch_create( channel_t* ch, const char* conn_info, int port );
 int  ch_read( channel_t* ch, void *out_buffer, uint32_t buffer_size, int usecs );
 int  ch_write( channel_t* ch, const void *buffer, uint32_t buffer_size );
 void ch_close( channel_t* ch );
