@@ -28,7 +28,7 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
 // "192.168.1.136"
 bool discovery_start( const char* local_ip ) {
   blob_create( &ds.buff, 0, 1024 );
-  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", 5002) )
+  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", 51562) )
     return false;
 
   // Msg to the cameras my identify. prefix + ip + suffix

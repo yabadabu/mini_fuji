@@ -48,7 +48,7 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->net_buffer, 0, 32768 );
 
   conn->sequence_id = 1;
-  conn->trace_io = false;
+  conn->trace_io = true;
   conn_clear_state( conn );
 
   callback_clear( &conn->on_progress );
@@ -136,7 +136,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
 
   if( conn->curr_cmd ) {
     // expect seq_id == otf_msg->seq_id
-    assert( msg_type == msg_type_data || msg_type == msg_type_end );
+    assert( msg_type == msg_type_data || msg_type == msg_type_end || msg_type == msg_type_init );
 
     // Send the extra bytes to the current cmd to parse
     // Sometimes there is data as part of the msg_type_end msg type
@@ -151,6 +151,18 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
     if( msg_type == msg_type_end ) {
       conn_clear_state( conn );
       conn->last_cmd_result = cmd_id;
+    }
+
+    else if( msg_type == msg_type_init ) {
+      printf( "cmd id is %04x\n", cmd_id );
+      if( cmd_id == cmd_initialize_comm.id ) {
+        printf( "seq_id is %04x\n", seq_id );
+        if( seq_id == 0x00002019 ) { // Device Busy
+          printf( "Resending initializtion packet\n");
+          conn_clear_state( conn );
+          ptpip_initialize( conn );
+        }
+      }
     }
 
     // We will not receive a 'end' for the initialization command
@@ -246,7 +258,7 @@ int ptpip_initialize( conn_t* conn ) {
 }
 
 int ptpip_open_session( conn_t* conn ) {
-  return ptpip_basic_cmd( conn, &cmd_open_session );
+  return ptpip_basic_cmd_u32( conn, &cmd_open_session, 0x00000001, NULL );
 }
 
 int ptpip_close_session( conn_t* conn ) {

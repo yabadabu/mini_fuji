@@ -327,7 +327,7 @@ bool test_channels() {
 
   camera_info_t camera_info;
   //const char* my_ip = "172.19.198.229";
-  const char* my_ip = "192.168.1.136";
+  const char* my_ip = "172.20.10.3";
   discovery_start( my_ip );
   while( !discovery_update( &camera_info, 5 * 1000 ) )
     printf( "Searching camera in %s...\n", my_ip);
@@ -352,16 +352,20 @@ bool test_channels() {
   wait_until_cmd_processed( c );
   printf( "Iniitalization complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
+  ptpip_close_session( c );
+  wait_until_cmd_processed( c );
+  printf( "close_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
+
+  ptpip_open_session( c );
+  wait_until_cmd_processed( c );
+  printf( "open_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
+
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
   wait_until_cmd_processed( c );
   printf( "%d storages found %s\n", storage_ids.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
   for( int i=0; i<storage_ids.count; ++i ) 
     printf( "    ID:%08x\n", storage_ids.ids[i].id );
-
-  ptpip_open_session( c );
-  wait_until_cmd_processed( c );
-  printf( "open_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
   conn_destroy( c );
 
