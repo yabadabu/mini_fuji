@@ -56,20 +56,29 @@ const server = net.createServer((socket) => {
         console.log(`Received: ${data.length} bytes`);
 
         const cmd = data.readInt32LE( 4 )
+        let answer;
         if( cmd == 0x00000001 ) {
-          console.log( "This is the PTP initialize cmd\n");
-          const answer1 = Buffer.from("4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000", "hex");
-          const n = socket.write(answer1);
+          console.log( "This is the PTP initialize cmd");
+          answer = Buffer.from("4400000002000000000000000870b0610a8b4593b2e79357dd36e05058002d00540032000000000000000000000000000000000000000000000000000000000000000000", "hex");
         
         } else if( cmd == 0x10040001 ) { // This is a get_storages
-          console.log( "This is the PTP get_storages cmd\n");
-          const answer1 = Buffer.from("1800000002000410050000000200000001000010020000100c0000000300012005000000", "hex");
-          const n = socket.write(answer1);
+          console.log( "This is the PTP get_storages cmd");
+          answer = Buffer.from("1800000002000410050000000200000001000010020000100c0000000300012005000000", "hex");
         
+        } else if( cmd == 0x10020001 ) { // open session
+          console.log( "This is the PTP open_session cmd");
+          answer = Buffer.from("0c0000000300012003000000", "hex");
+
         } else {
           console.log( "Unexpected cmd", data.toString("hex") );
           //console.log( "Answering", result, n )
         }
+
+        if( answer ) {
+          console.log( data.length, " bytes of ur answer", data.toString("hex") );
+          const n = socket.write(answer);
+        }
+
     });
 
     socket.on("end", () => {

@@ -48,6 +48,7 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->net_buffer, 0, 32768 );
 
   conn->sequence_id = 1;
+  conn->trace_io = false;
   conn_clear_state( conn );
 
   callback_clear( &conn->on_progress );
@@ -81,7 +82,10 @@ int  conn_get_last_ptpip_return_code( conn_t* conn ) {
 }
 
 void conn_recv( conn_t* conn, const blob_t* new_data ) {
-  printf( "Recv %4d bytes\n", blob_size( new_data ) );
+  if( conn->trace_io ) {
+    printf( "Recv %4d bytes\n", blob_size( new_data ) );
+    blob_dump( new_data );
+  }
   blob_append_blob( &conn->recv_data, new_data );
   
   // Report to the progress callback
@@ -95,8 +99,10 @@ void conn_recv( conn_t* conn, const blob_t* new_data ) {
 }
 
 void conn_send( conn_t* conn, const blob_t* blob ) {
-  printf( "Send " );
-  blob_dump( blob );
+  if( conn->trace_io ) {
+    printf( "Send " );
+    blob_dump( blob );
+  }
   ch_write( &conn->channel, blob->data, blob_size( blob ) );
 }
 

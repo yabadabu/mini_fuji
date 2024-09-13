@@ -29,6 +29,8 @@ typedef struct {
   callback_progress_t on_progress;
   channel_t           channel;
   int                 last_cmd_result;
+
+  bool                trace_io;
 } conn_t;
 
 bool conn_create( conn_t* );

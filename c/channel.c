@@ -5,6 +5,7 @@
 #include <stdio.h>      // printf
 #include <stdlib.h>
 
+// --------------------------------------------------------------------
 #ifdef _WIN32
 
 #define sys_close               closesocket
@@ -56,6 +57,7 @@ int reportLocalIPs() {
   return 0;
 }
 
+// --------------------------------------------------------------------
 #else
 
 #include <errno.h>
@@ -107,9 +109,11 @@ int reportLocalIPs() {
 
 #endif
 
+// --------------------------------------------------------------------
 #include "channel.h"
 
 static const char* broadcast_ip = "255.255.255.255";
+#define invalid_socket_id            (~0)
 
 static int set_non_blocking_socket(socket_t sockfd) {
 
@@ -166,7 +170,7 @@ static bool set_udp_broadcast(socket_t sockfd ) {
 
 void ch_close( channel_t* ch ) {
   sys_close( ch->fd );
-  ch->fd = -1;
+  ch->fd = invalid_socket_id;
 }
 
 static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port ) {
@@ -202,7 +206,7 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
 
 void ch_clean( channel_t* ch ) {
   // Clear to some sane values
-  ch->fd = 0;
+  ch->fd = invalid_socket_id;
   ch->is_udp = false;
   ch->is_broadcast = false;
   ch->is_server = false;

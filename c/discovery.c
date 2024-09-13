@@ -16,6 +16,7 @@ typedef struct {
 static discovery_service_t ds;
 
 bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
+  blob->count = 0;
   int bytes_read = ch_read( ch, blob->data, blob->reserved, usecs );
   if( bytes_read > 0 ) {
     blob->count = bytes_read;
