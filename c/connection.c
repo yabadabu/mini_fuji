@@ -56,7 +56,7 @@ bool conn_create( conn_t* conn ) {
 
 void conn_destroy( conn_t* conn ) {
   conn_clear_state( conn );
-  blob_destroy( &conn->otf_msg );
+  blob_destroy( &conn->net_buffer );
   blob_destroy( &conn->otf_msg );
   blob_destroy( &conn->last_answer );
   blob_destroy( &conn->recv_data );
@@ -76,9 +76,13 @@ uint32_t conn_next_msg_sequence( conn_t* conn) {
   return conn->sequence_id - 1;
 }
 
-void conn_add_data( conn_t* conn, const void* new_data, uint32_t data_size ) {
-  printf( "Recv %4d bytes\n", data_size );
-  blob_append_data( &conn->recv_data, new_data, data_size );
+int  conn_get_last_ptpip_return_code( conn_t* conn ) {
+  return conn->last_cmd_result;
+}
+
+void conn_recv( conn_t* conn, const blob_t* new_data ) {
+  printf( "Recv %4d bytes\n", blob_size( new_data ) );
+  blob_append_blob( &conn->recv_data, new_data );
   
   // Report to the progress callback
   if( conn->on_progress.callback ) {
@@ -139,8 +143,8 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
 
     // The command is over?
     if( msg_type == msg_type_end ) {
-      int rc = cmd_id;
       conn_clear_state( conn );
+      conn->last_cmd_result = cmd_id;
     }
 
     // We will not receive a 'end' for the initialization command
@@ -167,7 +171,7 @@ int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output
 void conn_update( conn_t* conn, int usecs ) {
 
   if( ch_read_blob( &conn->channel, &conn->net_buffer, usecs ) )
-    conn_add_data( conn, conn->net_buffer.data, conn->net_buffer.count );
+    conn_recv( conn, &conn->net_buffer );
 
   uint32_t required_bytes = 0;
   while( conn_has_packet_ready( conn, &required_bytes ) ) {

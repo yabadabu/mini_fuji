@@ -77,7 +77,7 @@ void send_end_of_packet( conn_t* c ) {
   blob_t eoc;
   blob_create( &eoc, 0, 256 );
   blob_from_hex_string( &eoc, 0, "0c000000 0300 1210 05000000" );
-  conn_add_data( c, eoc.data, eoc.count );
+  conn_recv( c, &eoc );
   conn_update( c, 1 );
   assert( !conn_is_waiting_answer( c ) );
 }
@@ -95,7 +95,7 @@ bool test_get_storage(conn_t* c) {
   blob_create( &ans, 0, 256 );
   blob_from_hex_string( &ans, 0, "18000000 0200 0210 05000000 020000000100001002000010");
   blob_dump( &ans );
-  conn_add_data( c, ans.data, ans.count );
+  conn_recv( c, &ans );
   conn_update( c, 1 );
 
   send_end_of_packet( c );
@@ -116,7 +116,7 @@ bool test_get_prop(conn_t* c) {
   blob_create( &ans, 0, 256 );
   blob_from_hex_string( &ans, 0, "0e000000 0200 1510 05000000 0100");
   blob_dump( &ans );
-  conn_add_data( c, ans.data, ans.count );
+  conn_recv( c, &ans );
   conn_update( c, 1 );
 
   send_end_of_packet( c );
@@ -192,13 +192,13 @@ bool test_get_obj(conn_t* c) {
   blob_create( &ans, 0, 256 );
   blob_from_hex_string( &ans, 0, "14000000 0200 1510 05000000 01002233");
   blob_dump( &ans );
-  conn_add_data( c, ans.data, ans.count );
+  conn_recv( c, &ans );
   conn_update( c, 1 );
 
   blob_t ans2;
   blob_create( &ans2, 0, 256 );
   blob_from_hex_string( &ans2, 0, "88998877");
-  conn_add_data( c, ans2.data, ans2.count );
+  conn_recv( c, &ans2 );
 
   conn_update( c, 1 );
   assert( output.count == 8 );
@@ -236,7 +236,7 @@ bool test_initialize( conn_t* c ) {
   blob_t bans;
   blob_create( &bans, 0, 256 );
   blob_from_hex_string( &bans, 0, ans );
-  conn_add_data( c, bans.data, bans.count );
+  conn_recv( c, &bans );
   conn_update( c, 1 );
   assert( !conn_is_waiting_answer( c ) );
 
