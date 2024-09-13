@@ -44,13 +44,13 @@ int parse_get_prop( const blob_t* args, void* output ) {
 }
 
 cmd_t cmd_get_prop = { 
-  .id = 0x1014, 
+  .id = 0x1015, 
   .name = "get_prop", 
   .parse = &parse_get_prop 
 };
 
 cmd_t cmd_set_prop = { 
-  .id = 0x1015, 
+  .id = 0x1016, 
   .name = "set_prop", 
 };
 

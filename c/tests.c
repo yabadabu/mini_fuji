@@ -367,6 +367,32 @@ bool test_channels() {
   for( int i=0; i<storage_ids.count; ++i ) 
     printf( "    ID:%08x\n", storage_ids.ids[i].id );
 
+  prop_t p = prop_quality;
+  ptpip_get_prop( c, &p );
+  wait_until_cmd_processed( c );
+  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
+
+  if( storage_ids.count > 0 ) {
+    handles_t handles;
+    ptpip_get_obj_handles( c, storage_ids.ids[0], &handles );
+    wait_until_cmd_processed( c );
+    printf( "%d handles found. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
+    for( int i=0; i<handles.count; ++i ) 
+      printf( "    ID:%08x\n", handles.handles[i].value );
+
+  }
+
+  p.val16 = 0x0002;
+  ptpip_set_prop( c, &p );
+  wait_until_cmd_processed( c );
+  printf( "set_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
+
+  p.val16 = 0xffff;
+  ptpip_get_prop( c, &p );
+  wait_until_cmd_processed( c );
+  assert( p.val16 == 0x0002 );
+  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
+
   conn_destroy( c );
 
 /*

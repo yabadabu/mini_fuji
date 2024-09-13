@@ -80,7 +80,7 @@ typedef struct {
 
 int ptpip_initialize( conn_t* conn );
 int ptpip_get_storage_ids( conn_t*, storage_ids_t* ); 
-int ptpip_get_objs( conn_t*, handles_t* ); 
+int ptpip_get_obj_handles( conn_t*, storage_id_t storage_id, handles_t* ); 
 int ptpip_get_prop( conn_t*, prop_t* prop ); 
 int ptpip_set_prop( conn_t*, prop_t* prop ); 
 int ptpip_open_session( conn_t* );
