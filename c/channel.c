@@ -8,8 +8,6 @@
 #ifdef _WIN32
 
 #define sys_close               closesocket
-#define sys_recv                recv
-#define sys_send                send
 #define CH_ERR_WOULD_BLOCK      WSAEWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS WSAEWOULDBLOCK
 
@@ -75,8 +73,6 @@ int reportLocalIPs() {
 #include <netdb.h>
 
 #define sys_close               close
-#define sys_recv                recv
-#define sys_send                send
 #define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
 
@@ -362,6 +358,39 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
   return true;
 }
 
+
+// -------------------------------------------------------
+#define OP_READ    1
+#define OP_WRITE   2
+
+bool ch_can_io( channel_t* ch, int io_op, struct timeval* tv ) {
+  socket_t sockfd = ch->fd;
+  fd_set fds;
+  FD_ZERO(&fds);
+  FD_SET(sockfd, &fds);
+
+  fd_set* read_fds = (io_op == OP_READ ) ? &fds : NULL;
+  fd_set* write_fds = (io_op == OP_WRITE ) ? &fds : NULL;
+
+  // Use select() to wait for the socket to be ready for reading/writing
+  int ret = select((int)(sockfd + 1), read_fds, write_fds, NULL, tv);
+  if (ret < 0) {
+    perror("select");
+    return false;
+
+  } else if (ret > 0 && FD_ISSET(sockfd, &fds)) {
+    return true;
+  }
+
+  return false;
+}
+
+void ch_wait( int usecs ) {
+  struct timeval tv = {usecs / 1000000, usecs % 1000000};
+  select(0, NULL, NULL, NULL, &tv);
+}
+
+// -------------------------------------------------------
 int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
   uint8_t* obuf = (uint8_t*) out_buffer;
   socket_t sockfd = ch->fd;
@@ -372,35 +401,23 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
 
   while (total_bytes_read < max_length) {
 
-      // Use select() to wait for the socket to be ready for reading
-      fd_set read_fds;
-      FD_ZERO(&read_fds);
-      FD_SET(sockfd, &read_fds);
+    if( !ch_can_io( ch, OP_READ, &tv ) )
+      break;
 
-      int ret = select((int)(sockfd + 1), &read_fds, NULL, NULL, &tv);
-      if (ret < 0) {
-          perror("select");
-          return -1;
+    int bytes_read = recv(sockfd, obuf, max_length - total_bytes_read, 0);
+    if (bytes_read < 0) {
+        if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
+            break;
+        } else {
+            perror("read");
+            return -1;
+        }
+    } else if (bytes_read == 0) {
+        break;
+    }
+    total_bytes_read += bytes_read;
+    obuf += bytes_read;
 
-      } else if (ret > 0 && FD_ISSET(sockfd, &read_fds)) {
-          int bytes_read = sys_recv(sockfd, obuf, max_length - total_bytes_read, 0);
-          if (bytes_read < 0) {
-              if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
-                  break;
-              } else {
-                  perror("read");
-                  return -1;
-              }
-          } else if (bytes_read == 0) {
-              break;
-          }
-          total_bytes_read += bytes_read;
-          obuf += bytes_read;
-
-      // Nothing to read. timeout
-      } else if( ret == 0 ) {
-          break;
-      }
   }
 
   return (int)total_bytes_read;
@@ -413,53 +430,31 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
 
   while (total_bytes_written < (int)length) {
 
-      // Use select() to wait for the socket to be ready for writing
-      fd_set write_fds;
-      FD_ZERO(&write_fds);
-      FD_SET(sockfd, &write_fds);
+    if( !ch_can_io( ch, OP_WRITE, NULL ) )
+      break;
 
-      int ret = select((int)(sockfd + 1), NULL, &write_fds, NULL, NULL);
-      if (ret < 0) {
-          perror("select");
-          return -1;
+    int bytes_written = send(sockfd, ibuf, length - total_bytes_written, 0);
+    if (bytes_written < 0) {
+      if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
+        break;
 
-      } else if (ret > 0 && FD_ISSET(sockfd, &write_fds)) {
-          int bytes_written = sys_send(sockfd, ibuf, length - total_bytes_written, 0);
-          if (bytes_written < 0) {
-              if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
-                  break;
-
-              } else {
-                  perror("write");
-                  return -1;
-              }
-          }
-          total_bytes_written += bytes_written;
-          ibuf += bytes_written;
+      } else {
+        perror("write");
+        return -1;
       }
+    }
+    total_bytes_written += bytes_written;
+    ibuf += bytes_written;
   }
 
   return total_bytes_written;
 }
 
-void ch_wait( int usecs ) {
-  struct timeval tv = {usecs / 1000000, usecs % 1000000};
-  select(0, NULL, NULL, NULL, &tv);
-}
-
 bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
 
-  fd_set fds;
-  FD_ZERO(&fds);
-  FD_SET(server->fd, &fds);
-
   struct timeval tv = {usecs / 1000000, usecs % 1000000};
 
-  int ret = select((int)(server->fd + 1), &fds, NULL, NULL, &tv);
-  if (ret < 0)
-    return false;
-
-  if( ret == 0 )
+  if( !ch_can_io( server, OP_READ, &tv ) )
     return false;
 
   struct sockaddr_storage sa;
@@ -474,6 +469,7 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   ch_clean( out_new_client );
 
   out_new_client->fd = new_fd;
+  //out_new_client->port = 
   return true;
 }
 
