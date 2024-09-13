@@ -58,7 +58,6 @@ int reportLocalIPs() {
   return 0;
 }
 
-
 #else
 
 #include <errno.h>
@@ -80,6 +79,35 @@ int reportLocalIPs() {
 #define sys_send                send
 #define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
+
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+int reportLocalIPs() {
+  struct ifaddrs *ifaddr, *ifa;
+  char host[NI_MAXHOST];
+
+  if (getifaddrs(&ifaddr) == -1) {
+      perror("getifaddrs");
+      return -1;
+  }
+
+  // Loop through the list of interfaces
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+      if (ifa->ifa_addr == NULL) 
+        continue;
+
+      if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
+          if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+              printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, host);
+          }
+      }
+  }
+
+  freeifaddrs(ifaddr);
+  return 0;
+}
 
 #endif
 
@@ -193,19 +221,22 @@ void ch_clean( channel_t* ch ) {
 // udp:0.0.0.0:4700         -> Broadcast udp to port 4700
 bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
-#ifdef _WIN32
-
   static bool global_initialization = false;
   if (!global_initialization) {
+
+#ifdef _WIN32
+
     WSADATA wsaData;
     WORD wVersionRequested = MAKEWORD(2, 2);
     int wsaerr = WSAStartup(wVersionRequested, &wsaData);
     assert(wsaerr == 0);
+
+#endif
+
     reportLocalIPs();
     global_initialization = true;
   }
 
-#endif
 
   assert( ch );
   assert( conn_info );
@@ -446,52 +477,3 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   return true;
 }
 
-
-
-/*
-
-get local ip in windows
-
-
-#include <winsock2.h>
-#include <iphlpapi.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-
-
-get local ip in unix
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <ifaddrs.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-int main() {
-    struct ifaddrs *ifaddr, *ifa;
-    char host[NI_MAXHOST];
-
-    if (getifaddrs(&ifaddr) == -1) {
-        perror("getifaddrs");
-        exit(EXIT_FAILURE);
-    }
-
-    // Loop through the list of interfaces
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL) continue;
-
-        if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
-            if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
-                printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, host);
-            }
-        }
-    }
-
-    freeifaddrs(ifaddr);
-    return 0;
-}
-
-
-*/
