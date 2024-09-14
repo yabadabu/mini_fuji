@@ -6,10 +6,20 @@
 
 const char* prop_get_value_str( prop_t* p );
 
-extern prop_t prop_quality;
-#define PDV_Quality_Raw           0x0001
-#define PDV_Quality_Fine          0x0002
-#define PDV_Quality_Normal        0x0003
-#define PDV_Quality_FineRaw       0x0004
-#define PDV_Quality_NormalRaw     0x0005
+extern const prop_t prop_quality;
+#define PDV_Quality_Raw                   0x0001
+#define PDV_Quality_Fine                  0x0002
+#define PDV_Quality_Normal                0x0003
+#define PDV_Quality_FineRaw               0x0004
+#define PDV_Quality_NormalRaw             0x0005
+
+extern const prop_t prop_priority_mode;
+#define PDV_Priority_Mode_Camera          0x0001
+#define PDV_Priority_Mode_USB             0x0002
+
+extern const prop_t prop_capture_control;
+#define PDV_Capture_Control_AutoFocus     0x0200
+#define PDV_Capture_Control_Shoot         0x0304
+
+extern const prop_t prop_pending_events;
 

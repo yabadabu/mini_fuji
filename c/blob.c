@@ -158,15 +158,19 @@ bool blob_is_valid( const blob_t* blob ) {
   // assert( blob );
   // assert( blob->data );
   // assert( blob->reserved >= blob->count );
-  return blob && blob->data && blob->count < 16384 && blob->reserved >= blob->count;
+  return blob && blob->data && blob->reserved >= blob->count;
 }
 
 void blob_dump( const blob_t* blob ) {
   printf( "%4d / %4d %p : ", blob->count, blob->reserved, blob->data );
-  for( uint32_t i=0; i<blob->count; ++i ) {
-    printf( "%02x ", blob->data[i] );
-    // if( (i+1) % 16 == 0)
-    //   printf( "\n");
+  if( blob->count < 256 ) {
+    for( uint32_t i=0; i<blob->count; ++i ) {
+      printf( "%02x ", blob->data[i] );
+      // if( (i+1) % 16 == 0)
+      //   printf( "\n");
+    }
+  } else {
+    printf( "Lots of data...");
   }
   printf( "\n");
 }

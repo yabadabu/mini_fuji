@@ -47,7 +47,8 @@ enum eValueType {
   PDT_U16, 
   PDT_U32, 
   //U64, 
-  PDT_String
+  PDT_STRING,
+  PDT_ARRAY_PROP_VALUES,    // Custom
 };
 
 typedef struct { 

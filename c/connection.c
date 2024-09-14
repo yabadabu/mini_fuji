@@ -331,6 +331,7 @@ int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out
 
 int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_progress_t on_progress ) {
   assert( out_obj && conn && handle.value );
+  assert( blob_is_valid( out_obj ) );
   conn->on_progress = on_progress;
   int rc = ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
   return rc;

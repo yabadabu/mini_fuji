@@ -323,8 +323,32 @@ void wait_until_cmd_processed( conn_t* c) {
   printf( "\n");
 }
 
+void set_prop( conn_t* c, const prop_t* prop, uint32_t value ) {
+  prop_t p = *prop;
+  p.ivalue = value;
+  ptpip_set_prop( c, &p );
+  wait_until_cmd_processed( c );
+  printf( "set_prop( %04x:%s, %04x:%s ) complete %s => %02x\n", p.id, p.name, p.ivalue, prop_get_value_str( &p ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+}
+
+bool test_prop_value( ) {
+  prop_t p0 = prop_quality;
+  p0.ivalue = 3;
+  const char* prop_val = prop_get_value_str( &p0 );
+  printf( "For prop %s, val 0x%04x is %s\n\n", p0.name, p0.ivalue, prop_val );
+  assert( strcmp( prop_val, "Normal" ) == 0 );
+  return true;
+}
+
+static void download_progress( void* context, uint32_t curr, uint32_t required ) {
+  printf( "download_progress %d/%d\n", curr, required );
+}
+
 bool test_channels() {
   printf( "Testing channels...\n");
+
+  if( !test_prop_value() )
+    return false;
 
   camera_info_t camera_info;
   //const char* my_ip = "172.19.198.229";
@@ -369,24 +393,12 @@ bool test_channels() {
   for( int i=0; i<storage_ids.count; ++i ) 
     printf( "    ID:%08x\n", storage_ids.ids[i].id );
 
-  if( storage_ids.count > 0 ) {
-    handles_t handles;
-    ptpip_get_obj_handles( c, storage_ids.ids[0], &handles );
-    wait_until_cmd_processed( c );
-    printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
-    for( int i=0; i<handles.count; ++i ) 
-      printf( "    ID:%08x\n", handles.handles[i].value );
-  }
-
   prop_t p = prop_quality;
   ptpip_get_prop( c, &p );
   wait_until_cmd_processed( c );
   printf( "get_prop( %s ) complete %s => %02x (%s)\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue, prop_get_value_str( &p ) );
 
-  p.ivalue = PDV_Quality_Normal;
-  ptpip_set_prop( c, &p );
-  wait_until_cmd_processed( c );
-  printf( "set_prop( %s, %s ) complete %s => %02x\n", p.name, prop_get_value_str( &p ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+  set_prop( c, &prop_quality, PDV_Quality_Normal);
 
   p.ivalue = 0xffff;
   ptpip_get_prop( c, &p );
@@ -394,28 +406,71 @@ bool test_channels() {
   assert( p.ivalue == PDV_Quality_Normal );
   printf( "get_prop( %s ) complete %s => %02x (%s)\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue, prop_get_value_str( &p ) );
 
+  // Take shoot sequence (without autofocus)
+  set_prop( c, &prop_priority_mode, PDV_Priority_Mode_USB);
+  
+  set_prop( c, &prop_capture_control, PDV_Capture_Control_AutoFocus);
+  ptpip_initiate_capture( c );
+  wait_until_cmd_processed( c );
+  
+  set_prop( c, &prop_capture_control, PDV_Capture_Control_Shoot);
+  ptpip_initiate_capture( c );
+  wait_until_cmd_processed( c );
+
+  prop_t pending_events = prop_pending_events;
+  while( true ) {
+    ptpip_get_prop( c, &pending_events );
+    wait_until_cmd_processed( c );
+    if( pending_events.ivalue > 0 )
+      break;
+    ch_wait( 100 * 1000 );  // 100 ms
+  }
+
+  set_prop( c, &prop_priority_mode, PDV_Priority_Mode_Camera);
+
+  ptpip_terminate_capture( c );
+  wait_until_cmd_processed( c );
+
+  if( storage_ids.count > 0 ) {
+    handles_t handles;
+    ptpip_get_obj_handles( c, storage_ids.ids[0], &handles );
+    wait_until_cmd_processed( c );
+    printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
+
+    blob_t obj;
+    blob_create( &obj, 0, 64 * 1024 );
+
+    callback_progress_t progress = { .context = NULL, .callback = &download_progress };
+    for( int i=0; i<handles.count; ++i ) {
+      handle_t h = handles.handles[i];
+      printf( "Recovering img:%08x\n", h.value );
+
+      ptpip_get_obj( c, h, &obj, progress );
+      wait_until_cmd_processed( c );
+      printf( "Img recovered: %d bytes\n", blob_size( &obj ));
+
+      char oname[64];
+      sprintf( oname, "output_%02d.jpg", i);
+      FILE *f = fopen( oname, "wb" );
+      if( f ) {
+        printf( "Saving file %s\n", oname );
+        fwrite( obj.data, 1, blob_size( &obj ), f);
+        fclose( f );
+      }
+
+      printf( "Deleting img\n" );
+      ptpip_del_obj( c, h );
+      wait_until_cmd_processed( c );
+
+    }
+  }
+
+
+
   conn_destroy( c );
 
-/*
-  printf( "Writing\n" );
-  int bytes_written = ch_write( c, "JOHN", 4 );
-  assert( bytes_written == 4 );
-  printf( "Write done\n" );
-
-  blob_t buff;
-  blob_create( &buff, 0, 64 );
-
-  printf( "Waiting answer\n" );
-  while( !ch_read_blob( c, &buff ) ) 
-    ch_wait( 10 * 1000 );
-  blob_dump( &buff );
-  printf( "Read from camera\n");
-
-  ch_close( c );
-  printf( "Testing channels OK\n");
-*/
-printf( "Iniitalization OK\n" );
-return false;
+  printf( "Iniitalization OK\n" );
+  return false;
 
   return true;
 }

@@ -38,6 +38,13 @@ int parse_get_prop( const blob_t* args, void* output ) {
   } else if( prop->data_type == PDT_U32 ) {
     assert( blob_size( args ) == 4 );
     prop->ivalue = blob_read_u32le( args, 0 );
+
+  } else if( prop->data_type == PDT_ARRAY_PROP_VALUES ) {
+    assert( blob_size( args ) >= 2 );
+    prop->ivalue = blob_read_u16le( args, 0 );
+    // Store the full stream here
+    blob_create( &prop->blob, 0, blob_size( args ) );
+    blob_append_blob( &prop->blob, args );
   }
 
   return 0; 
