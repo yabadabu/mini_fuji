@@ -2,8 +2,6 @@
 #include <assert.h>
 #include "connection.h"
 
-prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16 };
-
 // ------------------------------------------------------
 extern cmd_t cmd_open_session;
 extern cmd_t cmd_close_session;

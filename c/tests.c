@@ -4,6 +4,7 @@
 #include "connection.h"
 #include "channel.h"
 #include "discovery.h"
+#include "properties.h"
 #include <assert.h>
 #include <string.h>     // strlen
 #include <stdio.h>      // printf
@@ -380,18 +381,18 @@ bool test_channels() {
   prop_t p = prop_quality;
   ptpip_get_prop( c, &p );
   wait_until_cmd_processed( c );
-  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+  printf( "get_prop( %s ) complete %s => %02x (%s)\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue, prop_get_value_str( &p ) );
 
-  p.ivalue = 0x0002;
+  p.ivalue = PDV_Quality_Normal;
   ptpip_set_prop( c, &p );
   wait_until_cmd_processed( c );
-  printf( "set_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+  printf( "set_prop( %s, %s ) complete %s => %02x\n", p.name, prop_get_value_str( &p ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
 
   p.ivalue = 0xffff;
   ptpip_get_prop( c, &p );
   wait_until_cmd_processed( c );
-  assert( p.ivalue == 0x0002 );
-  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+  assert( p.ivalue == PDV_Quality_Normal );
+  printf( "get_prop( %s ) complete %s => %02x (%s)\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue, prop_get_value_str( &p ) );
 
   conn_destroy( c );
 

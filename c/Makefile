@@ -6,15 +6,20 @@ DEPS = $(wildcard *.h)
 OBJS_PATH=./objs
 OBJS=$(foreach f,$(SRCS),$(OBJS_PATH)/$(notdir $(basename $(f))).o)
 
+AUTO_GEN_FILES = properties.h
+
 demo : ${OBJS} ${DEPS} 
 	cc ${OBJS} -o ${APP}
 	./${APP}
+
+properties.h : generate_props.js
+	node generate_props.js
 
 $(OBJS_PATH) :
 	@echo Creating temporal folder $(OBJS_PATH)
 	@mkdir -p $(OBJS_PATH)
 
-$(OBJS_PATH)/%.o : %.c $(DEPS) | $(OBJS_PATH)
+$(OBJS_PATH)/%.o : %.c $(DEPS) | $(OBJS_PATH) ${AUTO_GEN_FILES}
 	@echo C $<
 	@$(CC) -c $(CFLAGS) -o $@ $<
 

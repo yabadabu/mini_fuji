@@ -51,7 +51,7 @@ enum eValueType {
 };
 
 typedef struct { 
-  int16_t          id; 
+  uint16_t         id; 
   const char*      name;
   enum eValueType  data_type;
   int32_t          ivalue;
@@ -92,5 +92,4 @@ int ptpip_del_obj( conn_t*, handle_t handle );
 const char* ptpip_error_msg( int rc );
 
 // ---------------------------------------
-extern prop_t prop_quality;
 
