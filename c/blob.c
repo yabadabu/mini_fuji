@@ -174,3 +174,13 @@ void blob_dump( const blob_t* blob ) {
   }
   printf( "\n");
 }
+
+bool blob_save( blob_t* blob, const char* ofilename ) {
+  FILE *f = fopen( ofilename, "wb" );
+  if( !f ) 
+    return false;
+  size_t buffer_size = blob_size( blob );
+  size_t bytes_saved = fwrite( blob->data, 1, buffer_size, f);
+  fclose( f );
+  return buffer_size == bytes_saved;
+}

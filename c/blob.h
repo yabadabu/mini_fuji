@@ -25,3 +25,4 @@ uint16_t blob_read_u16le( const blob_t* blob, uint32_t offset );
 uint32_t blob_read_u32le( const blob_t* blob, uint32_t offset );
 void blob_dump( const blob_t* blob );
 void blob_from_hex_string( blob_t* blob, uint32_t offset, const char* hex_str );
+bool blob_save( blob_t* blob, const char* ofilename );

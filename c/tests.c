@@ -467,12 +467,10 @@ bool take_shot() {
 
         char oname[64];
         sprintf( oname, "output_%02d.jpg", i);
-        FILE *f = fopen( oname, "wb" );
-        if( f ) {
-          printf( "Saving file %s\n", oname );
-          fwrite( obj.data, 1, blob_size( &obj ), f);
-          fclose( f );
-        }
+        if( blob_save( &obj, oname ) )
+          printf( "Saved file %s\n", oname );
+        else
+          printf( "Failed to save img to local storage (%s)\n", oname );
       }
 
       blob_destroy( &obj );
