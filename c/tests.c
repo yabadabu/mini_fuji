@@ -340,15 +340,23 @@ bool test_prop_value( ) {
   return true;
 }
 
-static void download_progress( void* context, uint32_t curr, uint32_t required ) {
-  printf( "download_progress %d/%d\n", curr, required );
-}
-
 bool test_channels() {
-  printf( "Testing channels...\n");
-
   if( !test_prop_value() )
     return false;
+  return true;
+}
+
+static void download_progress( void* context, uint32_t curr, uint32_t required ) {
+  if( curr < required ) {
+    printf( "\rdownload_progress %d/%d", curr, required );
+    fflush( stdout );
+  } else {
+    printf( "\rdownload_progress Complete\n" );
+  }
+}
+
+bool take_shot() {
+  printf( "Take shot starts...\n");
 
   camera_info_t camera_info;
   //const char* my_ip = "172.19.198.229";
@@ -431,46 +439,56 @@ bool test_channels() {
   ptpip_terminate_capture( c );
   wait_until_cmd_processed( c );
 
+  // Images are already saved in the SD Cards (no real need to download)
+  // Download images (and remove from the sdram)
   if( storage_ids.count > 0 ) {
     handles_t handles;
     ptpip_get_obj_handles( c, storage_ids.ids[0], &handles );
     wait_until_cmd_processed( c );
     printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
-    blob_t obj;
-    blob_create( &obj, 0, 64 * 1024 );
+    bool download_images = false;
 
-    callback_progress_t progress = { .context = NULL, .callback = &download_progress };
-    for( int i=0; i<handles.count; ++i ) {
-      handle_t h = handles.handles[i];
-      printf( "Recovering img:%08x\n", h.value );
+    if( download_images ) {
+      blob_t obj;
+      blob_create( &obj, 0, 64 * 1024 );
 
-      ptpip_get_obj( c, h, &obj, progress );
-      wait_until_cmd_processed( c );
-      printf( "Img recovered: %d bytes\n", blob_size( &obj ));
+      callback_progress_t progress = { .context = NULL, .callback = &download_progress };
+      for( int i=0; i<handles.count; ++i ) {
+        handle_t h = handles.handles[i];
+        printf( "Recovering img:%08x\n", h.value );
 
-      char oname[64];
-      sprintf( oname, "output_%02d.jpg", i);
-      FILE *f = fopen( oname, "wb" );
-      if( f ) {
-        printf( "Saving file %s\n", oname );
-        fwrite( obj.data, 1, blob_size( &obj ), f);
-        fclose( f );
+        ptpip_get_obj( c, h, &obj, progress );
+
+        while( conn_is_waiting_answer( c ) )
+          conn_update( c, 1000 );     // 1 ms
+
+        printf( "Img recovered: %d bytes\n", blob_size( &obj ));
+
+        char oname[64];
+        sprintf( oname, "output_%02d.jpg", i);
+        FILE *f = fopen( oname, "wb" );
+        if( f ) {
+          printf( "Saving file %s\n", oname );
+          fwrite( obj.data, 1, blob_size( &obj ), f);
+          fclose( f );
+        }
       }
 
-      printf( "Deleting img\n" );
+      blob_destroy( &obj );
+    }
+
+    for( int i=0; i<handles.count; ++i ) {
+      handle_t h = handles.handles[i];
+      printf( "Deleting img from sdram (%08x)\n", h.value );
       ptpip_del_obj( c, h );
       wait_until_cmd_processed( c );
-
     }
+
   }
-
-
 
   conn_destroy( c );
 
-  printf( "Iniitalization OK\n" );
-  return false;
-
+  printf( "Initialization OK\n" );
   return true;
 }

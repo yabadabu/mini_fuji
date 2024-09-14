@@ -8,8 +8,11 @@
 bool test_blobs();
 bool test_conn();
 bool test_channels();
+bool take_shot();
 
 int main( int argc, char** argv ) {
+  if( take_shot() )
+    return 0;
   if( !test_channels() )
     return -1;
   if( !test_blobs() )
