@@ -357,6 +357,10 @@ static void download_progress( void* context, uint32_t curr, uint32_t required )
   }
 }
 
+static void notify_event( void* context, const char* event_str ) {
+  printf( "Evt: %s\n", event_str );
+}
+
 bool take_shot() {
   printf( "Take shot starts...\n");
 
@@ -364,7 +368,6 @@ bool take_shot() {
 
   network_interface_t ni[4];
   int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
-
   const char* local_ip = NULL;
   for( int i=0; i<num_interfaces; ++i ) {
     if( strcmp( ni[i].ip, "127.0.0.1" ) != 0 ) {
@@ -376,25 +379,25 @@ bool take_shot() {
   if( !local_ip )
     return false;
 
-  discovery_start( local_ip );
+  if( !discovery_start( local_ip ) )
+    return false;
   while( !discovery_update( &camera_info, 5 * 1000 ) )
     printf( "Searching camera at %s...\n", local_ip);
   discovery_stop();
-
-  char conn_str[128] = {"tcp:"};
-  strcat(conn_str, camera_info.ip);
-  printf( "Connecting to >>%s<<\n", conn_str );
-
-  printf( "Connected\n" );
 
   conn_t conn;
   conn_t* c = &conn;
   // set camera info?
   conn_create( c );
 
+  char conn_str[128] = {"tcp:"};
+  strcat(conn_str, camera_info.ip);
+  printf( "Connecting to >>%s<<\n", conn_str );
+
   // Connect to the camera using the conn channel
   if( !ch_create( &c->channel, conn_str, camera_info.port) )
     return false;
+  printf( "Connected\n" );
 
   ptpip_initialize( c );
   wait_until_cmd_processed( c );
@@ -437,6 +440,7 @@ bool take_shot() {
   ptpip_initiate_capture( c );
   wait_until_cmd_processed( c );
 
+  // Wait until the take is taken
   prop_t pending_events = prop_pending_events;
   while( true ) {
     ptpip_get_prop( c, &pending_events );
@@ -447,6 +451,7 @@ bool take_shot() {
   }
 
   set_prop( c, &prop_priority_mode, PDV_Priority_Mode_Camera);
+  wait_until_cmd_processed( c );
 
   ptpip_terminate_capture( c );
   wait_until_cmd_processed( c );
@@ -459,7 +464,7 @@ bool take_shot() {
     wait_until_cmd_processed( c );
     printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
-    bool download_images = false;
+    bool download_images = true;
 
     if( download_images ) {
       blob_t obj;
@@ -471,8 +476,8 @@ bool take_shot() {
         handle_t h = handles.handles[i];
         printf( "Recovering img:%08x\n", h.value );
 
+        // ----------------------------
         ptpip_get_obj( c, h, &obj );
-
         while( conn_is_waiting_answer( c ) )
           conn_update( c, 1000 );     // 1 ms
 
@@ -484,6 +489,22 @@ bool take_shot() {
           printf( "Saved file %s\n", oname );
         else
           printf( "Failed to save img to local storage (%s)\n", oname );
+
+        // ----------------------------
+        printf( "Recovering thumbnail:%08x\n", h.value );
+
+        ptpip_get_thumbnail( c, h, &obj );
+        while( conn_is_waiting_answer( c ) )
+          conn_update( c, 1000 );     // 1 ms
+
+        printf( "Thumbnail recovered: %d bytes\n", blob_size( &obj ));
+
+        sprintf( oname, "thumb_%08x.jpg", h.value);
+        if( blob_save( &obj, oname ) )
+          printf( "Saved file %s\n", oname );
+        else
+          printf( "Failed to save img to local storage (%s)\n", oname );
+
       }
 
       blob_destroy( &obj );

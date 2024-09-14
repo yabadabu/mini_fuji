@@ -18,11 +18,11 @@ typedef struct {
 
 typedef struct {
    void*  context;
-   void (*callback)( void* context, const char* name );
-} callback_cmd_t;
+   void (*callback)( void* context, const char* str );
+} callback_event_t;
 
 void clear_callback_progress( callback_progress_t* cb );
-void clear_callback_cmd( callback_cmd_t* cb );
+void clear_callback_event( callback_event_t* cb );
 
 // ---------------------------------------
 typedef struct {
@@ -39,8 +39,7 @@ typedef struct {
   int                 last_cmd_result;
 
   callback_progress_t on_progress;
-  callback_cmd_t      on_cmd_starts;
-  callback_cmd_t      on_cmd_ends;
+  callback_event_t    on_event;
 
   bool                trace_io;
 } conn_t;
@@ -102,6 +101,8 @@ int ptpip_initiate_capture( conn_t* );
 int ptpip_initiate_open_capture( conn_t* );
 int ptpip_terminate_capture( conn_t* );
 int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj );
+int ptpip_get_partial_obj( conn_t*, handle_t handle, uint32_t start, uint32_t size, blob_t* out_obj );
+int ptpip_get_thumbnail( conn_t*, handle_t handle, blob_t* out_obj );
 int ptpip_del_obj( conn_t*, handle_t handle );
 const char* ptpip_error_msg( int rc );
 

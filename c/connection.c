@@ -10,6 +10,8 @@ extern cmd_t cmd_initiate_open_capture;
 extern cmd_t cmd_terminate_capture;
 extern cmd_t cmd_del_obj;
 extern cmd_t cmd_get_obj;
+extern cmd_t cmd_get_partial_obj;
+extern cmd_t cmd_get_thumbnail;
 extern cmd_t cmd_get_prop;
 extern cmd_t cmd_set_prop;
 extern cmd_t cmd_get_storage_ids;
@@ -31,9 +33,17 @@ void clear_callback_progress( callback_progress_t* cb ) {
   cb->callback = NULL;
 }
 
-void clear_callback_cmd( callback_cmd_t* cb ) {
+void clear_callback_event( callback_event_t* cb ) {
   cb->context = NULL;
   cb->callback = NULL;
+}
+
+static void conn_emit_event( conn_t* conn, const char* prefix, const char* aux ) {
+  if( conn && conn->on_event.callback ) {
+    char str[256];
+    sprintf( str, "%s:%s", prefix, aux );
+    (*conn->on_event.callback)( conn->on_event.context, str );
+  }
 }
 
 // ------------------------------------------------------
@@ -55,8 +65,7 @@ bool conn_create( conn_t* conn ) {
   conn_clear_state( conn );
 
   clear_callback_progress( &conn->on_progress );
-  clear_callback_cmd( &conn->on_cmd_starts );
-  clear_callback_cmd( &conn->on_cmd_ends );
+  clear_callback_event( &conn->on_event );
   return true;
 }
 
@@ -161,8 +170,9 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
 
   // The command is over?
   if( msg_type == msg_type_end ) {
-    conn_clear_state( conn );
     conn->last_cmd_result = cmd_id;
+    conn_emit_event( conn, "cmd.ends.", conn->curr_cmd->name );
+    conn_clear_state( conn );
   }
 
   else if( msg_type == msg_type_init ) {
@@ -186,13 +196,15 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
 int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output_data) {
   
   // Previous transaction should have been finished
+  assert( conn );
+  assert( cmd );
   assert( conn->curr_cmd == NULL );
 
   conn_send( conn, data );
   conn->curr_output = output_data;
   conn->curr_cmd = cmd;
 
-  // Wait answer
+  conn_emit_event( conn, "cmd.starts.", cmd->name );
   return 0;
 }
 
@@ -225,24 +237,28 @@ void conn_create_cmd_msg( conn_t* conn, blob_t* msg, const cmd_t* cmd ) {
   create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 0 );
 }
 
-void conn_create_cmd_msg_u32( conn_t* conn, blob_t* msg, const cmd_t* cmd, uint32_t payload_int ) {
+int ptpip_cmd( conn_t* conn, cmd_t* cmd ) {
+  blob_t* msg = &conn->otf_msg;
+  conn_create_cmd_msg( conn, msg, cmd );
+  return conn_transaction( conn, msg, cmd, NULL );
+}
+
+int ptpip_cmd_1arg( conn_t* conn, cmd_t* cmd, uint32_t payload_int, void* output ) {
+  blob_t* msg = &conn->otf_msg;
   uint32_t msg_seq_id = conn_next_msg_sequence( conn );
   create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 4 );
   blob_write_u32le( msg, offset_payload, payload_int );
+  return conn_transaction( conn, msg, cmd, output );
 }
 
-int ptpip_basic_cmd( conn_t* conn, cmd_t* cmd ) {
+int ptpip_cmd_3arg( conn_t* conn, cmd_t* cmd, uint32_t arg1, uint32_t arg2, uint32_t arg3, void* output ) {
   blob_t* msg = &conn->otf_msg;
-  conn_create_cmd_msg( conn, msg, cmd );
-  conn_transaction( conn, msg, cmd, NULL );
-  return 0;
-}
-
-int ptpip_basic_cmd_u32( conn_t* conn, cmd_t* cmd, uint32_t payload_int, void* output ) {
-  blob_t* msg = &conn->otf_msg;
-  conn_create_cmd_msg_u32( conn, msg, cmd, payload_int );
-  conn_transaction( conn, msg, cmd, output );
-  return 0;
+  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
+  create_cmd_msg( msg, cmd, msg_type_cmd, msg_seq_id, 12 );
+  blob_write_u32le( msg, offset_payload + 0, arg1 );
+  blob_write_u32le( msg, offset_payload + 4, arg2 );
+  blob_write_u32le( msg, offset_payload + 8, arg3 );
+  return conn_transaction( conn, msg, cmd, output );
 }
 
 // -------------------------------------------------------------
@@ -268,11 +284,11 @@ int ptpip_initialize( conn_t* conn ) {
 }
 
 int ptpip_open_session( conn_t* conn ) {
-  return ptpip_basic_cmd_u32( conn, &cmd_open_session, 0x00000001, NULL );
+  return ptpip_cmd_1arg( conn, &cmd_open_session, 0x00000001, NULL );
 }
 
 int ptpip_close_session( conn_t* conn ) {
-  return ptpip_basic_cmd( conn, &cmd_close_session );
+  return ptpip_cmd( conn, &cmd_close_session );
 }
 
 int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
@@ -304,7 +320,7 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
 }
 
 int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
-  return ptpip_basic_cmd_u32( conn, &cmd_get_prop, (prop->id & 0xffff), prop );
+  return ptpip_cmd_1arg( conn, &cmd_get_prop, (prop->id & 0xffff), prop );
 }
 
 int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
@@ -316,38 +332,46 @@ int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
 }
 
 int ptpip_initiate_capture( conn_t* conn ) {
-  return ptpip_basic_cmd( conn, &cmd_initiate_capture );
+  return ptpip_cmd( conn, &cmd_initiate_capture );
 }
 
 int ptpip_initiate_open_capture( conn_t* conn ) {
-  return ptpip_basic_cmd( conn, &cmd_initiate_open_capture );
+  return ptpip_cmd( conn, &cmd_initiate_open_capture );
 }
 
 int ptpip_terminate_capture( conn_t* conn ) {
-  return ptpip_basic_cmd( conn, &cmd_terminate_capture );
+  return ptpip_cmd( conn, &cmd_terminate_capture );
 }
 
 int ptpip_del_obj( conn_t* conn, handle_t handle ) {
   // No output parameter expected
-  return ptpip_basic_cmd_u32( conn, &cmd_del_obj, handle.value, NULL );
+  return ptpip_cmd_1arg( conn, &cmd_del_obj, handle.value, NULL );
 }
 
 int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out_handles) {
   assert( out_handles && conn );
-  blob_t* msg = &conn->otf_msg;
-  uint32_t msg_seq_id = conn_next_msg_sequence( conn );
-  create_cmd_msg( msg, &cmd_get_obj_handles, msg_type_cmd, msg_seq_id, 12 );
-  blob_write_u32le( msg, offset_payload + 0, storage_id.id );
-  blob_write_u32le( msg, offset_payload + 4, 0 );
-  blob_write_u32le( msg, offset_payload + 8, 0xffffffff );
-  conn_transaction( conn, msg, &cmd_get_obj_handles, out_handles );
-  return 0;
+  return ptpip_cmd_3arg( conn, &cmd_get_obj_handles, storage_id.id, 0, 0xffffffff, out_handles );
 }
 
 int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj ) {
   assert( out_obj && conn && handle.value );
   assert( blob_is_valid( out_obj ) );
-  return ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
+  blob_clear( out_obj );
+  return ptpip_cmd_1arg( conn, &cmd_get_obj, handle.value, out_obj );
+}
+
+int ptpip_get_partial_obj( conn_t* conn, handle_t handle, uint32_t start, uint32_t size, blob_t* out_obj ) {
+  assert( out_obj && conn && handle.value );
+  assert( blob_is_valid( out_obj ) );
+  blob_clear( out_obj );
+  return ptpip_cmd_3arg( conn, &cmd_get_partial_obj, handle.value, start, size, out_obj );
+}
+
+int ptpip_get_thumbnail( conn_t* conn, handle_t handle, blob_t* out_obj ) {
+  assert( out_obj && conn && handle.value );
+  assert( blob_is_valid( out_obj ) );
+  blob_clear( out_obj );
+  return ptpip_cmd_1arg( conn, &cmd_get_thumbnail, handle.value, out_obj );
 }
 
 const char* ptpip_error_msg( int rc ) {

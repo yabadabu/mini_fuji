@@ -100,7 +100,7 @@ cmd_t cmd_get_obj_handles = {
 };
 
 // ------------------------------------------------------
-int parse_get_obj( const blob_t* args, void* output ) {
+int store_contents_in_blob( const blob_t* args, void* output ) {
   blob_t* b = (blob_t*) output;
   assert( b );
   blob_reserve( b, args->count );
@@ -111,5 +111,18 @@ int parse_get_obj( const blob_t* args, void* output ) {
 cmd_t cmd_get_obj = { 
   .id = 0x1009, 
   .name = "get_obj", 
-  .parse = &parse_get_obj
+  .parse = &store_contents_in_blob
 };
+
+cmd_t cmd_get_partial_obj = { 
+  .id = 0x101b, 
+  .name = "get_partial_obj", 
+  .parse = &store_contents_in_blob
+};
+
+cmd_t cmd_get_thumbnail = { 
+  .id = 0x100a, 
+  .name = "get_thumbnail", 
+  .parse = &store_contents_in_blob
+};
+
