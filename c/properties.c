@@ -10,9 +10,10 @@ const prop_t* prop_by_id( uint16_t prop_id ) {
     case 0xd212: return &prop_pending_events;
     case 0x5012: return &prop_pre_capture_delay;
     case 0x500a: return &prop_focus_mode;
+    case 0x500d: return &prop_exposure_time;
     default: break;
   }
-  return 0L;
+  return 0;
 }
 
 const char*   prop_get_value_str( prop_t* p ) {
@@ -20,11 +21,11 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0xd018: {  // quality
       switch( p->ivalue ) {
-        case 0x0001: return "Raw";
-        case 0x0002: return "Fine";
-        case 0x0003: return "Normal";
-        case 0x0004: return "Fine Raw";
-        case 0x0005: return "Normal Raw";
+        case PDV_Quality_Raw                 : return "Raw";
+        case PDV_Quality_Fine                : return "Fine";
+        case PDV_Quality_Normal              : return "Normal";
+        case PDV_Quality_FineRaw             : return "Fine Raw";
+        case PDV_Quality_NormalRaw           : return "Normal Raw";
         default: break;
       }
       break;
@@ -32,8 +33,8 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0xd207: {  // priority_mode
       switch( p->ivalue ) {
-        case 0x0001: return "Camera";
-        case 0x0002: return "USB";
+        case PDV_Priority_Mode_Camera        : return "Camera";
+        case PDV_Priority_Mode_USB           : return "USB";
         default: break;
       }
       break;
@@ -41,8 +42,8 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0xd208: {  // capture_control
       switch( p->ivalue ) {
-        case 0x0200: return "AutoFocus";
-        case 0x0304: return "Shoot";
+        case PDV_Capture_Control_AutoFocus   : return "AutoFocus";
+        case PDV_Capture_Control_Shoot       : return "Shoot";
         default: break;
       }
       break;
@@ -50,9 +51,9 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0x5012: {  // pre_capture_delay
       switch( p->ivalue ) {
-        case 0x2710: return "2 Secs";
-        case 0x07d0: return "10 Secs";
-        case 0x0000: return "Off";
+        case PDV_Pre_Capture_Delay_2Secs     : return "2 Secs";
+        case PDV_Pre_Capture_Delay_10Secs    : return "10 Secs";
+        case PDV_Pre_Capture_Delay_Off       : return "Off";
         default: break;
       }
       break;
@@ -60,9 +61,32 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0x500a: {  // focus_mode
       switch( p->ivalue ) {
-        case 0x8001: return "Single Auto";
-        case 0x8002: return "Continuous Auto";
-        case 0x0001: return "Manual";
+        case PDV_Focus_Mode_SingleAuto       : return "Single Auto";
+        case PDV_Focus_Mode_ContinuousAuto   : return "Continuous Auto";
+        case PDV_Focus_Mode_Manual           : return "Manual";
+        default: break;
+      }
+      break;
+    }
+
+    case 0x500d: {  // exposure_time
+      switch( p->ivalue ) {
+        case PDV_Exposure_Time_5secs         : return "5 secs";
+        case PDV_Exposure_Time_6_5secs       : return "6.5 secs";
+        case PDV_Exposure_Time_8secs         : return "8 secs";
+        case PDV_Exposure_Time_10secs        : return "10 secs";
+        case PDV_Exposure_Time_13secs        : return "13 secs";
+        case PDV_Exposure_Time_15secs        : return "15 secs";
+        case PDV_Exposure_Time_20secs        : return "20 secs";
+        case PDV_Exposure_Time_25secs        : return "25 secs";
+        case PDV_Exposure_Time_30secs        : return "30 secs";
+        case PDV_Exposure_Time_40secs        : return "40 secs";
+        case PDV_Exposure_Time_50secs        : return "50 secs";
+        case PDV_Exposure_Time_60secs        : return "60 secs";
+        case PDV_Exposure_Time_2mins         : return "2 mins";
+        case PDV_Exposure_Time_4mins         : return "4 mins";
+        case PDV_Exposure_Time_8mins         : return "8 mins";
+        case PDV_Exposure_Time_15mins        : return "15 mins";
         default: break;
       }
       break;
@@ -89,6 +113,9 @@ const prop_t prop_pre_capture_delay = { .id = 0x5012, .name = "Pre Capture Delay
                               .read_only = false, .ivalue = 0, 
                               .blob = { .count = 0, .data = 0, .reserved = 0 } };
 const prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_exposure_time = { .id = 0x500d, .name = "Exposure Time", .data_type = PDT_U32,
                               .read_only = false, .ivalue = 0, 
                               .blob = { .count = 0, .data = 0, .reserved = 0 } };
 

@@ -336,8 +336,15 @@ bool test_prop_value( ) {
   prop_t p0 = prop_quality;
   p0.ivalue = 3;
   const char* prop_val = prop_get_value_str( &p0 );
-  printf( "For prop %s, val 0x%04x is %s\n\n", p0.name, p0.ivalue, prop_val );
+  printf( "For prop %s, val 0x%04x is %s\n", p0.name, p0.ivalue, prop_val );
   assert( strcmp( prop_val, "Normal" ) == 0 );
+  
+  p0 = prop_exposure_time;
+  p0.ivalue = PDV_Exposure_Time_5secs;
+  prop_val = prop_get_value_str( &p0 );
+  printf( "For prop %s, val 0x%04x is %s\n", p0.name, p0.ivalue, prop_val );
+  assert( strcmp( prop_val, "5 secs" ) == 0 );
+
   return true;
 }
 
@@ -431,12 +438,10 @@ bool take_shot() {
   // Take shoot sequence (without autofocus)
   set_prop( c, &prop_priority_mode, PDV_Priority_Mode_USB);
   
-  set_prop( c, &prop_capture_control, PDV_Capture_Control_AutoFocus);
-  ptpip_initiate_capture( c );
-  wait_until_cmd_processed( c );
-  
+  /*
   bool test_open_capture = false;
   if( test_open_capture ) {
+    set_prop( c, &prop_capture_control, PDV_Capture_Control_BulbOn);
     ptpip_initiate_open_capture( c );
     wait_until_cmd_processed( c );
 
@@ -444,14 +449,30 @@ bool take_shot() {
     ch_wait( 1000 * 1000 );
 
     printf( "Stop after 1s");
+    set_prop( c, &prop_capture_control, PDV_Capture_Control_BulbOff);
     ptpip_terminate_capture( c );
     wait_until_cmd_processed( c );
   }
   else {
-    set_prop( c, &prop_capture_control, PDV_Capture_Control_Shoot);
-    ptpip_initiate_capture( c );
-    wait_until_cmd_processed( c );
-  }
+    */
+
+  // prop_t p2 = prop_exposure_time;
+  // p2.ivalue = 0xffffffff;
+  // ptpip_get_prop( c, &p2 );
+  // wait_until_cmd_processed( c );
+  // printf( "get_prop( %s ) complete %s => %02x (%s)\n", p2.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p2.ivalue, prop_get_value_str( &p2 ) );
+  
+  set_prop( c, &prop_exposure_time, PDV_Exposure_Time_5secs);
+  
+  set_prop( c, &prop_capture_control, PDV_Capture_Control_AutoFocus);
+
+  ptpip_initiate_capture( c );
+  wait_until_cmd_processed( c );
+  
+  set_prop( c, &prop_capture_control, PDV_Capture_Control_Shoot);
+  ptpip_initiate_capture( c );
+  wait_until_cmd_processed( c );
+  //}
 
   // Wait until the take is taken
   prop_t pending_events = prop_pending_events;
@@ -465,7 +486,6 @@ bool take_shot() {
   }
 
   set_prop( c, &prop_priority_mode, PDV_Priority_Mode_Camera);
-  wait_until_cmd_processed( c );
 
   ptpip_terminate_capture( c );
   wait_until_cmd_processed( c );
