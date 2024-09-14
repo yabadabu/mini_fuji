@@ -18,7 +18,7 @@ int parse_initialize_comm( const blob_t* args, void* output ) {
   return 0;
 }
 
-cmd_t cmd_initialize_comm   = { 
+cmd_t cmd_initialize_comm = { 
   .id = 0x0000, 
   .name = "initialize_comm",
   .parse = &parse_initialize_comm
@@ -33,11 +33,11 @@ int parse_get_prop( const blob_t* args, void* output ) {
 
   if( prop->data_type == PDT_U16 ) {
     assert( blob_size( args ) == 2 );
-    prop->val16 = blob_read_u16le( args, 0 );
+    prop->ivalue = blob_read_u16le( args, 0 );
 
   } else if( prop->data_type == PDT_U32 ) {
     assert( blob_size( args ) == 4 );
-    prop->val32 = blob_read_u32le( args, 0 );
+    prop->ivalue = blob_read_u32le( args, 0 );
   }
 
   return 0; 

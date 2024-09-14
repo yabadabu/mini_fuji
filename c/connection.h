@@ -54,8 +54,7 @@ typedef struct {
   int16_t          id; 
   const char*      name;
   enum eValueType  data_type;
-  int16_t          val16;
-  int32_t          val32;
+  int32_t          ivalue;
   blob_t           blob;
 } prop_t;
 

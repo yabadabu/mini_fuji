@@ -123,7 +123,7 @@ bool test_get_prop(conn_t* c) {
 
   assert( c->recv_data.count == 0);
   assert( p.id == prop_quality.id );
-  assert( p.val16 == 0x0001 );
+  assert( p.ivalue == 0x0001 );
   return true;
 }
 
@@ -131,7 +131,7 @@ bool test_set_prop(conn_t* c) {
   printf( "test_set_prop\n" );
   conn_clear_state( c );
   prop_t p = prop_quality;
-  p.val16 = 2;
+  p.ivalue = 2;
   ptpip_set_prop( c, &p );
   send_end_of_packet( c );
   return true;
@@ -360,6 +360,7 @@ bool test_channels() {
   wait_until_cmd_processed( c );
   printf( "open_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
+  // Via wifi at least these reprts 2 storages, one for SDRam of stills, and another for the video preview
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
   wait_until_cmd_processed( c );
@@ -367,31 +368,30 @@ bool test_channels() {
   for( int i=0; i<storage_ids.count; ++i ) 
     printf( "    ID:%08x\n", storage_ids.ids[i].id );
 
-  prop_t p = prop_quality;
-  ptpip_get_prop( c, &p );
-  wait_until_cmd_processed( c );
-  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
-
   if( storage_ids.count > 0 ) {
     handles_t handles;
     ptpip_get_obj_handles( c, storage_ids.ids[0], &handles );
     wait_until_cmd_processed( c );
-    printf( "%d handles found. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
+    printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
     for( int i=0; i<handles.count; ++i ) 
       printf( "    ID:%08x\n", handles.handles[i].value );
-
   }
 
-  p.val16 = 0x0002;
-  ptpip_set_prop( c, &p );
-  wait_until_cmd_processed( c );
-  printf( "set_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
-
-  p.val16 = 0xffff;
+  prop_t p = prop_quality;
   ptpip_get_prop( c, &p );
   wait_until_cmd_processed( c );
-  assert( p.val16 == 0x0002 );
-  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.val16 );
+  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+
+  p.ivalue = 0x0002;
+  ptpip_set_prop( c, &p );
+  wait_until_cmd_processed( c );
+  printf( "set_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
+
+  p.ivalue = 0xffff;
+  ptpip_get_prop( c, &p );
+  wait_until_cmd_processed( c );
+  assert( p.ivalue == 0x0002 );
+  printf( "get_prop( %s ) complete %s => %02x\n", p.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p.ivalue );
 
   conn_destroy( c );
 

@@ -275,15 +275,23 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
   blob_write_u32le( msg, offset_payload, (prop->id & 0xffff) );
   conn_send( conn, msg );
 
-  create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 2 );
-  blob_write_u16le( msg, offset_payload, prop->val16 );
+  if( prop->data_type == PDT_U16 ) {
+    create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 2 );
+    blob_write_u16le( msg, offset_payload, (prop->ivalue & 0xffff) );
+  } else if( prop->data_type == PDT_U32 ) {
+    create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 4 );
+    blob_write_u16le( msg, offset_payload, prop->ivalue );
+  } else {
+    printf( "prop.data_type %d not yet supported (prop name : %s)\n", prop->data_type, prop->name );
+    assert( false );
+  }
 
   conn_transaction( conn, msg, cmd, prop );
   return 0;
 }
 
 int ptpip_get_prop( conn_t* conn, prop_t* prop ) {
-  return ptpip_basic_cmd_u32( conn, &cmd_get_prop, prop->id & 0x0000ffff, prop );
+  return ptpip_basic_cmd_u32( conn, &cmd_get_prop, (prop->id & 0xffff), prop );
 }
 
 int ptpip_get_storage_ids( conn_t* conn, storage_ids_t* storage_ids ) {
