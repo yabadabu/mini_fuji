@@ -26,7 +26,12 @@ const uint32_t offset_payload = 12;
 
 bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs );
 
-void callback_clear( callback_progress_t* cb ) {
+void clear_callback_progress( callback_progress_t* cb ) {
+  cb->context = NULL;
+  cb->callback = NULL;
+}
+
+void clear_callback_cmd( callback_cmd_t* cb ) {
   cb->context = NULL;
   cb->callback = NULL;
 }
@@ -49,7 +54,9 @@ bool conn_create( conn_t* conn ) {
   conn->trace_io = true;
   conn_clear_state( conn );
 
-  callback_clear( &conn->on_progress );
+  clear_callback_progress( &conn->on_progress );
+  clear_callback_cmd( &conn->on_cmd_starts );
+  clear_callback_cmd( &conn->on_cmd_ends );
   return true;
 }
 
@@ -67,7 +74,6 @@ void conn_clear_state( conn_t* conn ) {
   conn->curr_output = NULL;
   conn->curr_cmd = NULL;
   blob_clear( &conn->otf_msg );
-  callback_clear( &conn->on_progress );
 }
 
 uint32_t conn_next_msg_sequence( conn_t* conn) {
@@ -283,9 +289,11 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
   if( prop->data_type == PDT_U16 ) {
     create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 2 );
     blob_write_u16le( msg, offset_payload, (prop->ivalue & 0xffff) );
+
   } else if( prop->data_type == PDT_U32 ) {
     create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 4 );
     blob_write_u16le( msg, offset_payload, prop->ivalue );
+    
   } else {
     printf( "prop.data_type %d not yet supported (prop name : %s)\n", prop->data_type, prop->name );
     assert( false );
@@ -336,12 +344,10 @@ int ptpip_get_obj_handles( conn_t* conn, storage_id_t storage_id, handles_t* out
   return 0;
 }
 
-int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj, callback_progress_t on_progress ) {
+int ptpip_get_obj( conn_t* conn, handle_t handle, blob_t* out_obj ) {
   assert( out_obj && conn && handle.value );
   assert( blob_is_valid( out_obj ) );
-  conn->on_progress = on_progress;
-  int rc = ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
-  return rc;
+  return ptpip_basic_cmd_u32( conn, &cmd_get_obj, handle.value, out_obj );
 }
 
 const char* ptpip_error_msg( int rc ) {

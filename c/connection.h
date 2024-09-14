@@ -16,6 +16,14 @@ typedef struct {
    void (*callback)( void* context, uint32_t current, uint32_t required );
 } callback_progress_t;
 
+typedef struct {
+   void*  context;
+   void (*callback)( void* context, const char* name );
+} callback_cmd_t;
+
+void clear_callback_progress( callback_progress_t* cb );
+void clear_callback_cmd( callback_cmd_t* cb );
+
 // ---------------------------------------
 typedef struct {
   blob_t              recv_data;      // Accumulated data before split it in packets
@@ -27,9 +35,12 @@ typedef struct {
   uint32_t            sequence_id;
   cmd_t*              curr_cmd;
   void*               curr_output;    // Extra arg to provide in the parse fn
-  callback_progress_t on_progress;
   channel_t           channel;
   int                 last_cmd_result;
+
+  callback_progress_t on_progress;
+  callback_cmd_t      on_cmd_starts;
+  callback_cmd_t      on_cmd_ends;
 
   bool                trace_io;
 } conn_t;
@@ -90,7 +101,7 @@ int ptpip_close_session( conn_t* );
 int ptpip_initiate_capture( conn_t* );
 int ptpip_initiate_open_capture( conn_t* );
 int ptpip_terminate_capture( conn_t* );
-int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj, callback_progress_t on_progress );
+int ptpip_get_obj( conn_t*, handle_t handle, blob_t* out_obj );
 int ptpip_del_obj( conn_t*, handle_t handle );
 const char* ptpip_error_msg( int rc );
 

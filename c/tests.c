@@ -186,8 +186,9 @@ bool test_get_obj(conn_t* c) {
   blob_create( &output, 0, 0 );
 
   int called = 0;
-  callback_progress_t my_callback = { .context = &called, .callback = &callback_progress };
-  ptpip_get_obj( c, h, &output, my_callback );
+  callback_progress_t my_progress = { .context = &called, .callback = &callback_progress };
+  c->on_progress = my_progress;
+  ptpip_get_obj( c, h, &output );
 
   blob_t ans;
   blob_create( &ans, 0, 256 );
@@ -400,11 +401,9 @@ bool take_shot() {
 
   ptpip_close_session( c );
   wait_until_cmd_processed( c );
-  printf( "close_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
   ptpip_open_session( c );
   wait_until_cmd_processed( c );
-  printf( "open_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
   // Via wifi at least these reports 2 storages, one for SDRam of stills, and another for the video preview
   storage_ids_t storage_ids;
@@ -465,13 +464,14 @@ bool take_shot() {
     if( download_images ) {
       blob_t obj;
       blob_create( &obj, 0, 64 * 1024 );
+      callback_progress_t my_progress = { .context = NULL, .callback = &download_progress };
+      c->on_progress = my_progress;
 
-      callback_progress_t progress = { .context = NULL, .callback = &download_progress };
       for( int i=0; i<handles.count; ++i ) {
         handle_t h = handles.handles[i];
         printf( "Recovering img:%08x\n", h.value );
 
-        ptpip_get_obj( c, h, &obj, progress );
+        ptpip_get_obj( c, h, &obj );
 
         while( conn_is_waiting_answer( c ) )
           conn_update( c, 1000 );     // 1 ms
@@ -487,6 +487,7 @@ bool take_shot() {
       }
 
       blob_destroy( &obj );
+      clear_callback_progress( &c->on_progress );
     }
 
     for( int i=0; i<handles.count; ++i ) {
