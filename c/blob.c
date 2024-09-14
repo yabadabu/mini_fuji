@@ -162,20 +162,19 @@ bool blob_is_valid( const blob_t* blob ) {
 }
 
 void blob_dump( const blob_t* blob ) {
-  printf( "%4d / %4d %p : ", blob->count, blob->reserved, blob->data );
-  if( blob->count < 256 ) {
-    for( uint32_t i=0; i<blob->count; ++i ) {
-      printf( "%02x ", blob->data[i] );
-      // if( (i+1) % 16 == 0)
-      //   printf( "\n");
-    }
-  } else {
-    printf( "Lots of data...");
-  }
+  printf( "%4d / %4d : ", blob->count, blob->reserved );
+  uint32_t max_i = blob->count > 512 ? 512 : blob->count;
+  for( uint32_t i=0; i<max_i; ++i ) {
+    // if( i > 0 && ( i % 32 ) == 0 )
+    //   printf( "\n                ");
+    printf( "%02x ", blob->data[i] );
+  } 
+  if( max_i != blob->count )
+    printf( "...");
   printf( "\n");
 }
 
-bool blob_save( blob_t* blob, const char* ofilename ) {
+bool blob_save( const blob_t* blob, const char* ofilename ) {
   FILE *f = fopen( ofilename, "wb" );
   if( !f ) 
     return false;
@@ -184,3 +183,54 @@ bool blob_save( blob_t* blob, const char* ofilename ) {
   fclose( f );
   return buffer_size == bytes_saved;
 }
+
+bool blob_load( blob_t* blob, const char* ifilename ) {
+  FILE *f = fopen( ifilename, "rb" );
+  if( !f ) 
+    return false;
+  // Quick and dirty way to get the file size
+  fseek( f, 0, SEEK_END );
+  size_t sz = ftell( f );
+  rewind( f );
+  blob_create( blob, sz, sz );
+  int bytes_read = fread( blob->data, 1, sz, f);
+  fclose( f );
+  return sz == bytes_read;
+}
+
+void blob_view( blob_t* blob, blob_t* source, uint32_t offset, uint32_t size ) {
+  blob->reserved = 0;
+  assert( offset + size <= source->count );
+  blob->data = source->data + offset;
+  blob->count = size;
+}
+
+bool blob_match( const blob_t* b1, const blob_t* b2 ) {
+  if( b1->count != b2->count )
+    return false;
+  return memcmp( b1->data, b2->data, b1->count ) == 0;
+}
+
+/* 
+
+  if( !equal ) {
+    const uint8_t* p0 = b0.data;
+    int match_i = -1;
+    int max_i = b1.count - b0b.count;
+    int max_j = b0.count - 4;
+    printf( "Searching block of %d bytes in block of %d bytes\n", max_j, max_i );
+    for( int i=0; i<max_i; ++i ) {
+      const uint8_t* p1 = b1.data + i;
+      bool equal = true;
+      if( blob_match( b1, b2 )) {
+        match_i = i;
+        break;
+      }
+    }
+    if( match_i >= 0 )
+      printf( "Blocks match at offset %d\n", match_i);
+
+  }
+
+
+*/

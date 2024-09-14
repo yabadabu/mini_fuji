@@ -321,7 +321,6 @@ void wait_until_cmd_processed( conn_t* c) {
     conn_update( c, 100000 );
     show_waiting_answer();
   }
-  printf( "\n");
   printf( "%s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 }
 
@@ -436,13 +435,28 @@ bool take_shot() {
   ptpip_initiate_capture( c );
   wait_until_cmd_processed( c );
   
-  set_prop( c, &prop_capture_control, PDV_Capture_Control_Shoot);
-  ptpip_initiate_capture( c );
-  wait_until_cmd_processed( c );
+  bool test_open_capture = false;
+  if( test_open_capture ) {
+    ptpip_initiate_open_capture( c );
+    wait_until_cmd_processed( c );
+
+    printf( "Waiting 1 sec");
+    ch_wait( 1000 * 1000 );
+
+    printf( "Stop after 1s");
+    ptpip_terminate_capture( c );
+    wait_until_cmd_processed( c );
+  }
+  else {
+    set_prop( c, &prop_capture_control, PDV_Capture_Control_Shoot);
+    ptpip_initiate_capture( c );
+    wait_until_cmd_processed( c );
+  }
 
   // Wait until the take is taken
   prop_t pending_events = prop_pending_events;
-  while( true ) {
+  int max_waits = 30;
+  while( max_waits-- > 0 ) {
     ptpip_get_prop( c, &pending_events );
     wait_until_cmd_processed( c );
     if( pending_events.ivalue > 0 )
@@ -464,11 +478,14 @@ bool take_shot() {
     wait_until_cmd_processed( c );
     printf( "%d handles found in storage[0]. Complete %s\n", handles.count, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
-    bool download_images = true;
+    blob_t obj;
+    blob_create( &obj, 0, 64 * 1024 );
+    char oname[64];
+
+    bool download_images = false;
+    bool test_partial_download = false;
 
     if( download_images ) {
-      blob_t obj;
-      blob_create( &obj, 0, 64 * 1024 );
       callback_progress_t my_progress = { .context = NULL, .callback = &download_progress };
       c->on_progress = my_progress;
 
@@ -483,12 +500,20 @@ bool take_shot() {
 
         printf( "Img recovered: %d bytes\n", blob_size( &obj ));
 
-        char oname[64];
         sprintf( oname, "img_%08x.jpg", h.value);
         if( blob_save( &obj, oname ) )
           printf( "Saved file %s\n", oname );
-        else
-          printf( "Failed to save img to local storage (%s)\n", oname );
+
+        // ----------------------------
+        ptpip_get_partial_obj( c, h, 1024, 4096, &obj );
+        while( conn_is_waiting_answer( c ) )
+          conn_update( c, 1000 );     // 1 ms
+
+        printf( "block recovered: %d bytes\n", blob_size( &obj ));
+        blob_dump( &obj );
+        sprintf( oname, "block4k_%08x.jpg", h.value);
+        if( blob_save( &obj, oname ) )
+          printf( "Saved file %s\n", oname );
 
         // ----------------------------
         printf( "Recovering thumbnail:%08x\n", h.value );
@@ -502,14 +527,31 @@ bool take_shot() {
         sprintf( oname, "thumb_%08x.jpg", h.value);
         if( blob_save( &obj, oname ) )
           printf( "Saved file %s\n", oname );
-        else
-          printf( "Failed to save img to local storage (%s)\n", oname );
 
       }
 
-      blob_destroy( &obj );
       clear_callback_progress( &c->on_progress );
+
+    } 
+
+    if( test_partial_download ) {
+
+      for( int i=0; i<handles.count; ++i ) {
+        handle_t h = handles.handles[i];
+
+        // ----------------------------
+        ptpip_get_partial_obj( c, h, 1024, 4096, &obj );
+        while( conn_is_waiting_answer( c ) )
+          conn_update( c, 1000 );  
+
+        printf( "block recovered: %d bytes\n", blob_size( &obj ));
+        sprintf( oname, "block4k_%08x.jpg", h.value);
+        if( blob_save( &obj, oname ) )
+          printf( "Saved file %s\n", oname );
+      }
     }
+
+    blob_destroy( &obj );
 
     for( int i=0; i<handles.count; ++i ) {
       handle_t h = handles.handles[i];

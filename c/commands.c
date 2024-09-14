@@ -102,9 +102,11 @@ cmd_t cmd_get_obj_handles = {
 // ------------------------------------------------------
 int store_contents_in_blob( const blob_t* args, void* output ) {
   blob_t* b = (blob_t*) output;
-  assert( b );
-  blob_reserve( b, args->count );
-  blob_append_data( b, args->data, args->count );
+  assert( b && args );
+  //printf( "Adding %d bytes to existing blob of %d/%d\n", args->count, b->count, b->reserved );
+  // if( args->count < 32 )
+  //   blob_dump( args );
+  blob_append_data( b, args->data, blob_size(args) );
   return 0; 
 }
 
@@ -114,15 +116,29 @@ cmd_t cmd_get_obj = {
   .parse = &store_contents_in_blob
 };
 
-cmd_t cmd_get_partial_obj = { 
-  .id = 0x101b, 
-  .name = "get_partial_obj", 
-  .parse = &store_contents_in_blob
-};
-
 cmd_t cmd_get_thumbnail = { 
   .id = 0x100a, 
   .name = "get_thumbnail", 
   .parse = &store_contents_in_blob
 };
+
+
+// ------------------------------------------------------
+int parse_partial_obj( const blob_t* args, void* output ) {
+  blob_t* b = (blob_t*) output;
+  assert( b && args );
+  // The camera is sending an extra 4 bytes with the offset where the block is meant
+  uint32_t sz = blob_size( args );
+  if( sz > 4 )
+    blob_append_data( b, args->data, sz - 4 );
+  return 0; 
+}
+
+cmd_t cmd_get_partial_obj = { 
+  .id = 0x101b, 
+  .name = "get_partial_obj", 
+  .parse = &parse_partial_obj
+};
+
+
 

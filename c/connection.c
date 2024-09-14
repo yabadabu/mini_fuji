@@ -139,10 +139,9 @@ bool conn_is_waiting_answer( conn_t* conn ) {
 }
 
 void conn_dispatch( conn_t* conn, const blob_t* msg ) {
-  printf( "Processing packet");
 
   if( !conn->curr_cmd ) {
-    printf( "Not cmd waiting for camera answer!\n" );
+    printf( "Not cmd waiting for camera answer! Packed not processed\n" );
     return;
   }
 
@@ -158,7 +157,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   args.count = packet_size - offset_payload;
   args.reserved = 0;
 
-  printf( "%d bytes %04x %04x %08x : %s", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
+  printf( "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
   blob_dump( &args );
 
   // expect seq_id == otf_msg->seq_id
