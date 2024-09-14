@@ -359,11 +359,24 @@ bool take_shot() {
   printf( "Take shot starts...\n");
 
   camera_info_t camera_info;
-  //const char* my_ip = "172.19.198.229";
-  const char* my_ip = "172.20.10.3";
-  discovery_start( my_ip );
+
+  network_interface_t ni[4];
+  int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
+
+  const char* local_ip = NULL;
+  for( int i=0; i<num_interfaces; ++i ) {
+    if( strcmp( ni[i].ip, "127.0.0.1" ) != 0 ) {
+      printf( "%16s : %s\n", ni[i].ip, ni[i].name );
+      if( !local_ip )
+        local_ip = ni[i].ip;
+    }
+  }
+  if( !local_ip )
+    return false;
+
+  discovery_start( local_ip );
   while( !discovery_update( &camera_info, 5 * 1000 ) )
-    printf( "Searching camera in %s...\n", my_ip);
+    printf( "Searching camera at %s...\n", local_ip);
   discovery_stop();
 
   char conn_str[128] = {"tcp:"};

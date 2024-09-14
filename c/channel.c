@@ -23,28 +23,21 @@
 #else
 
 #include <errno.h>
-#include <fcntl.h>   // for fcntl()
+#include <fcntl.h>      // for fcntl()
 #include <unistd.h>     // for close()
 #include <netinet/tcp.h>   // For TCP_NODELAY
-#include <sys/socket.h>
-#include <sys/types.h>
+//#include <netinet/in.h>
+//#include <sys/socket.h>
+//#include <sys/types.h>
 #include <sys/select.h>
-#include <sys/types.h>
-#include <sys/uio.h>
+//#include <sys/uio.h>
 #include <arpa/inet.h>  // for inet_addr(), struct sockaddr_in
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
+#include <netdb.h>      // getaddrinfo
+#include <ifaddrs.h>    // getifaddrs
 
 #define sys_close               close
 #define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
-
-#include <ifaddrs.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
-
 
 #endif
 
@@ -415,10 +408,10 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   return true;
 }
 
-void make_network_interface_t( network_interface_t* out_ni, const char* ip, const char* desc ) {
+void make_network_interface_t( network_interface_t* out_ni, const char* ip, const char* name ) {
   memset( out_ni, 0x00, sizeof( network_interface_t ) );
-  strncpy( out_ni->local_ip, ip, sizeof( out_ni->local_ip ) - 1 );
-  strncpy( out_ni->desc, desc, sizeof( out_ni->desc ) - 1 );
+  strncpy( out_ni->ip, ip, sizeof( out_ni->ip ) - 1 );
+  strncpy( out_ni->name, name, sizeof( out_ni->name ) - 1 );
 }
 
 int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint32_t max_interfaces ) {
@@ -428,10 +421,8 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
 
   ULONG outBufLen = 15000;
   PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
-  if (pAddresses == NULL) {
-    printf("Memory allocation failed\n");
-    return 0;
-  }
+  if (pAddresses == NULL)
+    return -1;
 
   DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
   if (dwRetVal == NO_ERROR) {

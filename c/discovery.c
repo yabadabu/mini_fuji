@@ -14,6 +14,9 @@ typedef struct {
   channel_t ch_discovery;
 } discovery_service_t;
 
+#define DISCOVERY_BROADCAST_UDP_PORT    51562
+#define DISCOVERY_SERVER_ANSWERS        51560
+
 static discovery_service_t ds;
 
 bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
@@ -26,17 +29,10 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
   return false;
 }
 
-// "192.168.1.136"
 bool discovery_start( const char* local_ip ) {
-
-  // Dump detected local ip's
-  network_interface_t ni[4];
-  int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
-  for( int i=0; i<num_interfaces; ++i ) 
-    printf( "%16s : %s\n", ni[i].local_ip, ni[i].desc );
-
+  
   blob_create( &ds.buff, 0, 1024 );
-  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", 51562) )
+  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", DISCOVERY_BROADCAST_UDP_PORT) )
     return false;
 
   // Msg to the cameras my identify. prefix + ip + suffix
@@ -49,9 +45,9 @@ bool discovery_start( const char* local_ip ) {
   blob_append_data( msg, suffix, (uint32_t)strlen( suffix ) );
 
   // The camera will connect to this address via tcp and send his information
-  if( !ch_create( &ds.ch_discovery, "tcp_server:0.0.0.0", 51560) )
+  if( !ch_create( &ds.ch_discovery, "tcp_server:0.0.0.0", DISCOVERY_SERVER_ANSWERS) )
     return false;
-  assert( ds.ch_discovery.port = 51560 );
+  assert( ds.ch_discovery.port = DISCOVERY_SERVER_ANSWERS );
 
   return true;
 }

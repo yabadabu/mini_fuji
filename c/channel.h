@@ -18,8 +18,8 @@ typedef struct {
 } channel_t;
 
 typedef struct {
-  char     local_ip[32];
-  char     desc[128];
+  char     ip[32];
+  char     name[128];
 } network_interface_t;
 
 bool ch_create( channel_t* ch, const char* conn_info, int port );
