@@ -81,7 +81,7 @@ int  conn_get_last_ptpip_return_code( conn_t* conn ) {
 
 void conn_recv( conn_t* conn, const blob_t* new_data ) {
   if( conn->trace_io ) {
-    printf( "Recv %4d bytes\n", blob_size( new_data ) );
+    printf( "Recv " );
     blob_dump( new_data );
   }
   blob_append_blob( &conn->recv_data, new_data );
@@ -125,49 +125,55 @@ bool conn_is_waiting_answer( conn_t* conn ) {
 
 void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   printf( "Processing packet");
-  blob_dump( msg );
+
+  if( !conn->curr_cmd ) {
+    printf( "Not cmd waiting for camera answer!\n" );
+    return;
+  }
+
   uint32_t packet_size = blob_read_u32le( msg, 0 );
   uint16_t msg_type = blob_read_u16le( msg, 4 );
   uint16_t cmd_id = blob_read_u16le( msg, 6 );
   uint16_t seq_id = blob_read_u32le( msg, 8 );
-  printf( "%d bytes %04x %04x %08x CurrCmd:%s\n", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
 
-  if( conn->curr_cmd ) {
-    // expect seq_id == otf_msg->seq_id
-    assert( msg_type == msg_type_data || msg_type == msg_type_end || msg_type == msg_type_init );
+  // Send the extra bytes to the current cmd to parse
+  // Sometimes there is data as part of the msg_type_end msg type
+  blob_t args;
+  args.data = msg->data + offset_payload;
+  args.count = packet_size - offset_payload;
+  args.reserved = 0;
 
-    // Send the extra bytes to the current cmd to parse
-    // Sometimes there is data as part of the msg_type_end msg type
-    blob_t args;
-    args.data = msg->data + offset_payload;
-    args.count = packet_size - offset_payload;
-    args.reserved = 0;
-    if( args.count > 0 && conn->curr_cmd->parse )
-      conn->curr_cmd->parse( &args, conn->curr_output );
+  printf( "%d bytes %04x %04x %08x : %s", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
+  blob_dump( &args );
 
-    // The command is over?
-    if( msg_type == msg_type_end ) {
-      conn_clear_state( conn );
-      conn->last_cmd_result = cmd_id;
-    }
+  // expect seq_id == otf_msg->seq_id
+  assert( msg_type == msg_type_data || msg_type == msg_type_end || msg_type == msg_type_init );
 
-    else if( msg_type == msg_type_init ) {
-      printf( "cmd id is %04x\n", cmd_id );
-      if( cmd_id == cmd_initialize_comm.id ) {
-        printf( "seq_id is %04x\n", seq_id );
-        if( seq_id == 0x00002019 ) { // Device Busy
-          printf( "Resending initializtion packet\n");
-          conn_clear_state( conn );
-          ptpip_initialize( conn );
-        }
+  // Let the current cmd parse the incomming data
+  if( args.count > 0 && conn->curr_cmd->parse )
+    conn->curr_cmd->parse( &args, conn->curr_output );
+
+  // The command is over?
+  if( msg_type == msg_type_end ) {
+    conn_clear_state( conn );
+    conn->last_cmd_result = cmd_id;
+  }
+
+  else if( msg_type == msg_type_init ) {
+    if( cmd_id == cmd_initialize_comm.id ) {    // 0x0000
+      if( seq_id == 0x00002019 ) {              // Device Busy
+        printf( "Resending initializtion packet\n");
+        conn_clear_state( conn );
+        ptpip_initialize( conn );
       }
     }
+  }
 
-    // We will not receive a 'end' for the initialization command
-    else if( msg_type == msg_type_data && cmd_id == cmd_initialize_comm.id )
-      conn_clear_state( conn );
-
-  } 
+  // We will not receive a 'end' for the initialization command
+  else if( msg_type == msg_type_data && cmd_id == cmd_initialize_comm.id ) {
+    conn->last_cmd_result = 0x2001;
+    conn_clear_state( conn );
+  }
 
 }
 
