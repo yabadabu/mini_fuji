@@ -23,6 +23,7 @@
     <ClInclude Include="..\c\channel.h" />
     <ClInclude Include="..\c\connection.h" />
     <ClInclude Include="..\c\discovery.h" />
+    <ClInclude Include="..\c\properties.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\c\api.c" />
@@ -31,6 +32,7 @@
     <ClCompile Include="..\c\commands.c" />
     <ClCompile Include="..\c\connection.c" />
     <ClCompile Include="..\c\discovery.c" />
+    <ClCompile Include="..\c\properties.c" />
     <ClCompile Include="..\c\tests.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

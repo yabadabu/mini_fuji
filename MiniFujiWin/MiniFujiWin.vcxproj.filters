@@ -5,6 +5,7 @@
     <ClInclude Include="..\c\blob.h" />
     <ClInclude Include="..\c\channel.h" />
     <ClInclude Include="..\c\connection.h" />
+    <ClInclude Include="..\c\properties.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\c\tests.c" />
@@ -14,5 +15,6 @@
     <ClCompile Include="..\c\connection.c" />
     <ClCompile Include="..\c\discovery.c" />
     <ClCompile Include="..\c\api.c" />
+    <ClCompile Include="..\c\properties.c" />
   </ItemGroup>
 </Project>

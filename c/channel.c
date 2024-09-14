@@ -432,7 +432,10 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
       wcstombs_s(&n, friendly_name, sizeof(friendly_name), pCurrAddresses->FriendlyName, 128);
       char description[256];
       wcstombs_s(&n, description, sizeof(description), pCurrAddresses->Description, 128);
-      printf("Adapter name: %s (%s) : %s\n", friendly_name, description, pCurrAddresses->AdapterName);
+      // friendly_name : Ethernet
+      // AdapterName   : {EE2F68CC-5A8F-4655-B3A2-4340A8A8F71D}
+      // description   : Intel(R) I211 Gigabit Network Connection
+      // printf("Adapter name: %s (%s) : %s\n", friendly_name, description, pCurrAddresses->AdapterName);
       PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
       while (pUnicast != NULL) {
         SOCKADDR* sa = pUnicast->Address.lpSockaddr;
