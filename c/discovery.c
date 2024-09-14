@@ -1,6 +1,7 @@
 #include <string.h>
 //#include <stdio.h>
 #include <stdlib.h>     // atoi
+#include <stdio.h>     // printf
 #include <assert.h>
 #include "discovery.h"
 #include "channel.h"
@@ -27,6 +28,13 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
 
 // "192.168.1.136"
 bool discovery_start( const char* local_ip ) {
+
+  // Dump detected local ip's
+  network_interface_t ni[4];
+  int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
+  for( int i=0; i<num_interfaces; ++i ) 
+    printf( "%16s : %s\n", ni[i].local_ip, ni[i].desc );
+
   blob_create( &ds.buff, 0, 1024 );
   if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", 51562) )
     return false;

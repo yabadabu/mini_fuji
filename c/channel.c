@@ -19,44 +19,6 @@
 #pragma comment(lib, "Ws2_32.lib")
 #define socklen_t int
 
-int reportLocalIPs() {
-  ULONG outBufLen = 15000;
-  PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
-  if (pAddresses == NULL) {
-    printf("Memory allocation failed\n");
-    return -1;
-  }
-
-  DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
-  if (dwRetVal == NO_ERROR) {
-    PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
-    while (pCurrAddresses) {
-      char friendly_name[256]; size_t n = 0;
-      wcstombs_s(&n, friendly_name, sizeof(friendly_name), pCurrAddresses->FriendlyName, 128);
-      char description[256];
-      wcstombs_s(&n, description, sizeof(description), pCurrAddresses->Description, 128);
-      printf("Adapter name: %s (%s) : %s\n", friendly_name, description, pCurrAddresses->AdapterName);
-      PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
-      while (pUnicast != NULL) {
-        SOCKADDR* sa = pUnicast->Address.lpSockaddr;
-        if (sa->sa_family == AF_INET) {
-          char str[INET_ADDRSTRLEN];
-          inet_ntop(AF_INET, &(((struct sockaddr_in*)sa)->sin_addr), str, INET_ADDRSTRLEN);
-          printf("IPv4 Address: %s\n", str);
-        }
-        pUnicast = pUnicast->Next;
-      }
-      pCurrAddresses = pCurrAddresses->Next;
-    }
-  }
-  else {
-    printf("GetAdaptersAddresses failed with error: %lu\n", dwRetVal);
-  }
-
-  free(pAddresses);
-  return 0;
-}
-
 // --------------------------------------------------------------------
 #else
 
@@ -82,30 +44,7 @@ int reportLocalIPs() {
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-int reportLocalIPs() {
-  struct ifaddrs *ifaddr, *ifa;
-  char host[NI_MAXHOST];
 
-  if (getifaddrs(&ifaddr) == -1) {
-      perror("getifaddrs");
-      return -1;
-  }
-
-  // Loop through the list of interfaces
-  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-      if (ifa->ifa_addr == NULL) 
-        continue;
-
-      if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
-          if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
-              printf("Interface: %s\tAddress: %s\n", ifa->ifa_name, host);
-          }
-      }
-  }
-
-  freeifaddrs(ifaddr);
-  return 0;
-}
 
 #endif
 
@@ -233,7 +172,6 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
 #endif
 
-    reportLocalIPs();
     global_initialization = true;
   }
 
@@ -476,4 +414,76 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   //out_new_client->port = 
   return true;
 }
+
+void make_network_interface_t( network_interface_t* out_ni, const char* ip, const char* desc ) {
+  memset( out_ni, 0x00, sizeof( network_interface_t ) );
+  strncpy( out_ni->local_ip, ip, sizeof( out_ni->local_ip ) - 1 );
+  strncpy( out_ni->desc, desc, sizeof( out_ni->desc ) - 1 );
+}
+
+int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint32_t max_interfaces ) {
+  int num_interfaces = 0;
+
+#ifdef _WIN32
+
+  ULONG outBufLen = 15000;
+  PIP_ADAPTER_ADDRESSES pAddresses = (IP_ADAPTER_ADDRESSES*)malloc(outBufLen);
+  if (pAddresses == NULL) {
+    printf("Memory allocation failed\n");
+    return 0;
+  }
+
+  DWORD dwRetVal = GetAdaptersAddresses(AF_INET, 0, NULL, pAddresses, &outBufLen);
+  if (dwRetVal == NO_ERROR) {
+    PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
+    while (pCurrAddresses) {
+      char friendly_name[256]; size_t n = 0;
+      wcstombs_s(&n, friendly_name, sizeof(friendly_name), pCurrAddresses->FriendlyName, 128);
+      char description[256];
+      wcstombs_s(&n, description, sizeof(description), pCurrAddresses->Description, 128);
+      printf("Adapter name: %s (%s) : %s\n", friendly_name, description, pCurrAddresses->AdapterName);
+      PIP_ADAPTER_UNICAST_ADDRESS pUnicast = pCurrAddresses->FirstUnicastAddress;
+      while (pUnicast != NULL) {
+        SOCKADDR* sa = pUnicast->Address.lpSockaddr;
+        if (sa->sa_family == AF_INET) {
+          char str[INET_ADDRSTRLEN];
+          inet_ntop(AF_INET, &(((struct sockaddr_in*)sa)->sin_addr), str, INET_ADDRSTRLEN);
+          make_network_interface_t( out_interfaces + num_interfaces, str, description );
+          ++num_interfaces;
+        }
+        pUnicast = pUnicast->Next;
+      }
+      pCurrAddresses = pCurrAddresses->Next;
+    }
+  }
+  free(pAddresses);
+
+#else
+
+  struct ifaddrs *ifaddr, *ifa;
+  char host[NI_MAXHOST];
+
+  if (getifaddrs(&ifaddr) == -1)
+    return -1;
+
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+
+    if (ifa->ifa_addr == NULL) 
+      continue;
+
+    if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
+      if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+        make_network_interface_t( out_interfaces + num_interfaces, host, ifa->ifa_name );
+        ++num_interfaces;
+      }
+    }
+  }
+
+  freeifaddrs(ifaddr);
+
+#endif
+
+  return num_interfaces;  
+}
+
 
