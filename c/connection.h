@@ -10,6 +10,7 @@ typedef struct {
   int       (*parse)( const blob_t*, void* );
 } cmd_t;
 
+// ---------------------------------------
 typedef struct {
    void*  context;
    void (*callback)( void* context, uint32_t current, uint32_t required );
@@ -57,6 +58,7 @@ typedef struct {
   enum eValueType  data_type;
   int32_t          ivalue;
   blob_t           blob;
+  bool             read_only;
 } prop_t;
 
 // ---------------------------------------

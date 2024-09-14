@@ -271,6 +271,7 @@ int ptpip_close_session( conn_t* conn ) {
 
 int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
   assert( prop && conn );
+  assert( !prop->read_only );
   cmd_t* cmd = &cmd_set_prop;
   blob_t* msg = &conn->otf_msg;
   uint32_t msg_seq_id = conn_next_msg_sequence( conn );

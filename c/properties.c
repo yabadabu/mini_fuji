@@ -60,10 +60,22 @@ const char* prop_get_value_str( prop_t* p ) {
   return "Unknown";
 }
 
-const prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
-const prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
-const prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
-const prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
-const prop_t prop_pre_capture_delay = { .id = 0xd212, .name = "Pre Capture Delay", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
-const prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES,
+                              .read_only = true, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_pre_capture_delay = { .id = 0xd212, .name = "Pre Capture Delay", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16,
+                              .read_only = false, .ivalue = 0, 
+                              .blob = { .count = 0, .data = 0, .reserved = 0 } };
 

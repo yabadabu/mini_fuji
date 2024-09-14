@@ -321,6 +321,7 @@ void wait_until_cmd_processed( conn_t* c) {
     show_waiting_answer();
   }
   printf( "\n");
+  printf( "%s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 }
 
 void set_prop( conn_t* c, const prop_t* prop, uint32_t value ) {
@@ -396,7 +397,6 @@ bool take_shot() {
 
   ptpip_initialize( c );
   wait_until_cmd_processed( c );
-  printf( "Iniitalization complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
   ptpip_close_session( c );
   wait_until_cmd_processed( c );
@@ -406,7 +406,7 @@ bool take_shot() {
   wait_until_cmd_processed( c );
   printf( "open_session complete %s\n", ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ) );
 
-  // Via wifi at least these reprts 2 storages, one for SDRam of stills, and another for the video preview
+  // Via wifi at least these reports 2 storages, one for SDRam of stills, and another for the video preview
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
   wait_until_cmd_processed( c );
@@ -479,7 +479,7 @@ bool take_shot() {
         printf( "Img recovered: %d bytes\n", blob_size( &obj ));
 
         char oname[64];
-        sprintf( oname, "output_%02d.jpg", i);
+        sprintf( oname, "img_%08x.jpg", h.value);
         if( blob_save( &obj, oname ) )
           printf( "Saved file %s\n", oname );
         else
@@ -497,6 +497,9 @@ bool take_shot() {
     }
 
   }
+
+  ptpip_close_session( c );
+  wait_until_cmd_processed( c );
 
   conn_destroy( c );
 

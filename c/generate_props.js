@@ -102,7 +102,9 @@ function export_prop( Name, p ) {
   const name = NameId.toLowerCase()
   add_extern_decl( name )
 
-  body.push( `const prop_t prop_${name} = { .id = 0x${p.id}, .name = "${Name}", .data_type = PDT_${p.dt}, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };`)
+  body.push( `const prop_t prop_${name} = { .id = 0x${p.id}, .name = "${Name}", .data_type = PDT_${p.dt},` )
+  body.push( `                              .read_only = ${p.read_only ? true : false}, .ivalue = 0, `)
+  body.push( `                              .blob = { .count = 0, .data = 0, .reserved = 0 } };`)
 
   if( p.values ) {
     fn.push( `  case 0x${p.id}: {  // ${name}\n      switch( p->ivalue ) {`)
