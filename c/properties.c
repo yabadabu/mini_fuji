@@ -119,3 +119,16 @@ const prop_t prop_exposure_time = { .id = 0x500d, .name = "Exposure Time", .data
                               .read_only = false, .ivalue = 0, 
                               .blob = { .count = 0, .data = 0, .reserved = 0 } };
 
+
+const prop_t* props[] = {
+  &prop_quality,
+  &prop_priority_mode,
+  &prop_capture_control,
+  &prop_pending_events,
+  &prop_pre_capture_delay,
+  &prop_focus_mode,
+  &prop_exposure_time,
+  0L   // End of array
+};
+
+const prop_t** get_all_props( ) { return props; }
