@@ -307,7 +307,7 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
 
   } else if( prop->data_type == PDT_U32 ) {
     create_cmd_msg( msg, cmd, msg_type_data, msg_seq_id, 4 );
-    blob_write_u16le( msg, offset_payload, prop->ivalue );
+    blob_write_u32le( msg, offset_payload, prop->ivalue );
     
   } else {
     printf( "prop.data_type %d not yet supported (prop name : %s)\n", prop->data_type, prop->name );
