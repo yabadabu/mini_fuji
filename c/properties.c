@@ -35,13 +35,35 @@ const char* prop_get_value_str( prop_t* p ) {
       break;
     }
 
+    case 0xd212: {  // pre_capture_delay
+      switch( p->ivalue ) {
+        case 0x2710: return "2 Secs";
+        case 0x07d0: return "10 Secs";
+        case 0x0000: return "Off";
+        default: break;
+      }
+      break;
+    }
+
+    case 0x500a: {  // focus_mode
+      switch( p->ivalue ) {
+        case 0x8001: return "Single Auto";
+        case 0x8002: return "Continuous Auto";
+        case 0x0001: return "Manual";
+        default: break;
+      }
+      break;
+    }
+
     default: break;
   }
   return "Unknown";
 }
 
-const prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16, .ivalue = 0 };
-const prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16, .ivalue = 0 };
-const prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16, .ivalue = 0 };
-const prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES, .ivalue = 0 };
+const prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_pre_capture_delay = { .id = 0xd212, .name = "Pre Capture Delay", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
+const prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };
 

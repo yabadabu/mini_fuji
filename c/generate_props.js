@@ -34,6 +34,27 @@ const props = {
   "Pending Events" : {      // CurrentState in other sources
     id : 'd212',
     dt : 'ARRAY_PROP_VALUES',
+    read_only : true,
+  },
+
+  "Pre Capture Delay" : {      // CurrentState in other sources
+    id : 'd212',
+    dt : 'U16',
+    values : {
+      '07d0' : '10 Secs',
+      '2710' : '2 Secs',
+      '0000' : 'Off',
+    }
+  },
+
+  "Focus Mode" : {      // CurrentState in other sources
+    id : '500a',
+    dt : 'U16',
+    values : {
+      '0001' : 'Manual',
+      '8001' : 'Single Auto',
+      '8002' : 'Continuous Auto',
+    }
   },
 
 }
@@ -81,7 +102,7 @@ function export_prop( Name, p ) {
   const name = NameId.toLowerCase()
   add_extern_decl( name )
 
-  body.push( `const prop_t prop_${name} = { .id = 0x${p.id}, .name = "${Name}", .data_type = PDT_${p.dt}, .ivalue = 0 };`)
+  body.push( `const prop_t prop_${name} = { .id = 0x${p.id}, .name = "${Name}", .data_type = PDT_${p.dt}, .ivalue = 0, .blob = { .count = 0, .data = 0, .reserved = 0 } };`)
 
   if( p.values ) {
     fn.push( `  case 0x${p.id}: {  // ${name}\n      switch( p->ivalue ) {`)

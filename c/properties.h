@@ -23,3 +23,13 @@ extern const prop_t prop_capture_control;
 
 extern const prop_t prop_pending_events;
 
+extern const prop_t prop_pre_capture_delay;
+#define PDV_Pre_Capture_Delay_2Secs       0x2710
+#define PDV_Pre_Capture_Delay_10Secs      0x07d0
+#define PDV_Pre_Capture_Delay_Off         0x0000
+
+extern const prop_t prop_focus_mode;
+#define PDV_Focus_Mode_SingleAuto         0x8001
+#define PDV_Focus_Mode_ContinuousAuto     0x8002
+#define PDV_Focus_Mode_Manual             0x0001
+
