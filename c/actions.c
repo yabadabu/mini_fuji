@@ -18,6 +18,7 @@ enum eOpCode {
   OC_SET_PROP,
   OC_SET_PROPS,
   OC_INITIATE_CAPTURE,
+  OC_TERMINATE_CAPTURE,
   OC_WAIT_SHOOT_ENDS,
   OC_SAVE_IMAGES,
   OC_DELETE_IMAGES,
@@ -32,10 +33,11 @@ typedef struct {
 
 op_code_t action_take[] = {
   { OP_DISCOVER_CAMERA   },
+  { OP_CONNECT_TO_CAMERA },
   { OC_READ_STORAGE_IDS  },
   { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
-  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
+//  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
 
   { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_AutoFocus },
   { OC_INITIATE_CAPTURE, },
@@ -45,6 +47,8 @@ op_code_t action_take[] = {
   { OC_WAIT_SHOOT_ENDS,  },
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
   { OC_READ_OBJ_HANDLES  },
+  { OC_SAVE_IMAGES       },
+  { OC_DELETE_IMAGES     },
   { OC_END_OF_PROGRAM    }
 };
 
@@ -83,12 +87,13 @@ static void eval_next_ip( evaluation_t* ev ) {
   ev->iteration = 0;
 }
 
-static void eval_next_substep( evaluation_t* ev ) {
-  ev->steps_in_ip += 1;
+static void eval_next_iteration( evaluation_t* ev ) {
+  ev->steps_in_ip = 0;
+  ev->iteration += 1;
 }
 
-static void eval_next_iteration( evaluation_t* ev ) {
-  ev->iteration += 1;
+static void eval_next_substep( evaluation_t* ev ) {
+  ev->steps_in_ip += 1;
 }
 
 bool eval_error( evaluation_t* ev, const char* msg ) {
@@ -110,6 +115,8 @@ bool eval_step( evaluation_t* ev ) {
 
   op_code_t* cmd = ev->actions + ev->ip;
   int sub_step = ev->steps_in_ip;
+
+  //printf( "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );
   switch( cmd->op_code ) {
 
   case OP_DISCOVER_CAMERA:
@@ -156,17 +163,17 @@ bool eval_step( evaluation_t* ev ) {
       eval_next_substep( ev );
 
     } else if( sub_step == 1 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Initialize" );
+      printf( "OP_CONNECT_TO_CAMERA. Initialize\n" );
       ptpip_initialize( c );
       eval_next_substep( ev );
 
     } else if( sub_step == 2 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Close session" );
+      printf( "OP_CONNECT_TO_CAMERA. Close session\n" );
       ptpip_close_session( c );
       eval_next_substep( ev );
 
     } else if( sub_step == 3 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Open session" );
+      printf( "OP_CONNECT_TO_CAMERA. Open session\n" );
       ptpip_open_session( c );
       eval_next_ip( ev );
 
@@ -188,18 +195,26 @@ bool eval_step( evaluation_t* ev ) {
   case OC_SET_PROP: {
     prop_t* p = cmd->prop;
     p->ivalue = cmd->arg2;
-    printf( "Setting prop %04x %s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
+    printf( "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
     ptpip_set_prop( c, p );
     eval_next_ip( ev );
     break; }
 
   case OC_INITIATE_CAPTURE:
     printf( "Initiate Capture\n" );
+    ptpip_initiate_capture( c );
+    eval_next_ip( ev );
+    break;
+
+  case OC_TERMINATE_CAPTURE:
+    printf( "Terminate Capture\n" );
+    ptpip_terminate_capture( c );
     eval_next_ip( ev );
     break;
 
   case OC_WAIT_SHOOT_ENDS: {
-    printf( "Checking if shoot ends\n" );
+    if( sub_step == 0 )
+      printf( "Checking if shoot ends\n" );
 
     if( ( ev->steps_in_ip & 1 ) == 0 ) {
       prop_pending_events.ivalue = 0;
@@ -209,16 +224,19 @@ bool eval_step( evaluation_t* ev ) {
     else if( prop_pending_events.ivalue > 0 ) {
       eval_next_ip( ev );
     }
+    else {
+      eval_next_substep( ev );
+    }
     break; }
 
   case OC_READ_OBJ_HANDLES:
     printf( "Reading obj handles\n" );
     ptpip_get_obj_handles( c, ev->storage_ids.ids[0], &ev->handles );
-    eval_next_substep( ev );
+    eval_next_ip( ev );
     break;
 
   case OC_SAVE_IMAGES:
-    printf( "Downloading obj %d / %d\n", ev->iteration, ev->handles.count );
+    printf( "Downloading obj %d / %d [%d.%d]\n", ev->iteration, ev->handles.count, ev->iteration, sub_step );
     if( ev->iteration < ev->handles.count ) {
       handle_t h = ev->handles.handles[ ev->iteration ];
       if( ev->steps_in_ip == 0 ) {
@@ -226,10 +244,10 @@ bool eval_step( evaluation_t* ev ) {
         ptpip_get_obj( c, h, &ev->download_buffer );
         eval_next_substep( ev );
       }
-      else {
+      else if( ev->steps_in_ip == 1 ) {
         clear_callback_progress( &c->on_progress );
         char ofilename[256];
-        sprintf( ofilename, "img_%04d.jpg", ev->iteration - 1 );
+        sprintf( ofilename, "img_%04d.jpg", ev->iteration );
         printf( "Saving %d bytes to %s\n", blob_size( &ev->download_buffer ), ofilename );
         blob_save( &ev->download_buffer, ofilename );
         eval_next_iteration( ev );
@@ -269,15 +287,18 @@ bool eval_step( evaluation_t* ev ) {
 static void show_waiting_answer() {
   char tc[5] = "\\|/-";
   static int idx = 0;
-  printf( "\rWaiting answer from the camera... %c ", tc[idx] );
-  fflush( stdout );
+  //printf( "\rWaiting answer from the camera... %c", tc[idx] );
+  //fflush( stdout );
   idx = ( idx + 1 ) % 4;
 }
 
 bool test_evals() {
   conn_t       conn;
+  conn_create( &conn );
   evaluation_t ev;
   eval_create( &ev, &conn, action_take );
+
+  printf( "eval_step starts\n" );
   while( !eval_step( &ev )) {
     show_waiting_answer();
   }

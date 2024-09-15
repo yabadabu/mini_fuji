@@ -61,7 +61,7 @@ bool conn_create( conn_t* conn ) {
   blob_create( &conn->net_buffer, 0, 32768 );
 
   conn->sequence_id = 1;
-  conn->trace_io = true;
+  conn->trace_io = false;
   conn_clear_state( conn );
 
   clear_callback_progress( &conn->on_progress );
@@ -170,7 +170,9 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   // The command is over?
   if( msg_type == msg_type_end ) {
     conn->last_cmd_result = cmd_id;
-    conn_emit_event( conn, "cmd.ends.", conn->curr_cmd->name );
+    char msg[256];
+    sprintf( msg, "%s RC:%s", conn->curr_cmd->name, ptpip_error_msg( cmd_id ));
+    conn_emit_event( conn, "cmd.ends", msg );
     conn_clear_state( conn );
   }
 
@@ -203,7 +205,7 @@ int conn_transaction( conn_t* conn, const blob_t* data, cmd_t* cmd, void* output
   conn->curr_output = output_data;
   conn->curr_cmd = cmd;
 
-  conn_emit_event( conn, "cmd.starts.", cmd->name );
+  conn_emit_event( conn, "cmd.starts", cmd->name );
   return 0;
 }
 

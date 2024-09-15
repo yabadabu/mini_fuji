@@ -7,6 +7,7 @@ OBJS_PATH=./objs
 OBJS=$(foreach f,$(SRCS),$(OBJS_PATH)/$(notdir $(basename $(f))).o)
 
 AUTO_GEN_FILES = properties.h
+#CFLAGS = -O2
 
 demo : ${OBJS} ${DEPS} 
 	cc ${OBJS} -o ${APP}
@@ -24,7 +25,7 @@ $(OBJS_PATH)/%.o : %.c $(DEPS) | $(OBJS_PATH) ${AUTO_GEN_FILES}
 	@$(CC) -c $(CFLAGS) -o $@ $<
 
 clean :
-	rm ${APP}
+	rm -f ${APP}
 	rm -rf ${OBJS_PATH}
 
 watch: 
