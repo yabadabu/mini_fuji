@@ -9,9 +9,13 @@ bool test_blobs();
 bool test_conn();
 bool test_channels();
 bool test_props();
+bool test_evals();
 bool take_shot();
 
 int main( int argc, char** argv ) {
+
+  if( !test_evals() )
+    return -1;
 
   if( !test_props() )
     return -1;

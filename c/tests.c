@@ -308,7 +308,7 @@ bool test_channel_accept() {
   return true;
 }
 
-void show_waiting_answer() {
+static void show_waiting_answer() {
   char tc[5] = "\\|/-";
   static int idx = 0;
   printf( "\rWaiting answer from the camera... %c ", tc[idx] );
@@ -375,18 +375,22 @@ bool test_channels() {
   return true;
 }
 
-static void download_progress( void* context, uint32_t curr, uint32_t required ) {
+void download_progress( void* context, uint32_t curr, uint32_t required ) {
   if( curr < required ) {
-    printf( "\rdownload_progress %d/%d", curr, required );
+    float ratio = (float) curr / (float) required;
+    if( ratio > 1.0 )
+      ratio = 1.0f;
+    printf( "\rdownload_progress %d/%d (%.2f)%%", curr, required, ratio * 100.0f );
     fflush( stdout );
   } else {
     printf( "\rdownload_progress Complete\n" );
   }
 }
 
-static void notify_event( void* context, const char* event_str ) {
+void notify_event( void* context, const char* event_str ) {
   printf( "Evt: %s\n", event_str );
 }
+
 
 bool take_shot() {
   printf( "Take shot starts...\n");

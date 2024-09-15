@@ -9,7 +9,7 @@ const prop_t* prop_by_id( uint16_t prop_id );
 const prop_t** prop_get_all( );
 bool prop_get_nth_value( prop_t* prop, uint32_t idx, void* out_value );
 
-extern const prop_t prop_quality;
+extern prop_t prop_quality;
 #define PDV_Quality  0xd018
 #define PDV_Quality_Raw                   0x0001
 #define PDV_Quality_Fine                  0x0002
@@ -17,31 +17,31 @@ extern const prop_t prop_quality;
 #define PDV_Quality_Fine_Raw              0x0004
 #define PDV_Quality_Normal_Raw            0x0005
 
-extern const prop_t prop_priority_mode;
+extern prop_t prop_priority_mode;
 #define PDV_Priority_Mode  0xd207
 #define PDV_Priority_Mode_Camera          0x0001
 #define PDV_Priority_Mode_USB             0x0002
 
-extern const prop_t prop_capture_control;
+extern prop_t prop_capture_control;
 #define PDV_Capture_Control  0xd208
 #define PDV_Capture_Control_AutoFocus     0x0200
 #define PDV_Capture_Control_Shoot         0x0304
 
-extern const prop_t prop_pending_events;
+extern prop_t prop_pending_events;
 
-extern const prop_t prop_pre_capture_delay;
+extern prop_t prop_pre_capture_delay;
 #define PDV_Pre_Capture_Delay  0x5012
 #define PDV_Pre_Capture_Delay_Off         0x0000
 #define PDV_Pre_Capture_Delay_2_Secs      0x07d0
 #define PDV_Pre_Capture_Delay_10_Secs     0x2710
 
-extern const prop_t prop_focus_mode;
+extern prop_t prop_focus_mode;
 #define PDV_Focus_Mode  0x500a
 #define PDV_Focus_Mode_Manual             0x0001
 #define PDV_Focus_Mode_Single_Auto        0x8001
 #define PDV_Focus_Mode_Continuous_Auto    0x8002
 
-extern const prop_t prop_exposure_index;
+extern prop_t prop_exposure_index;
 #define PDV_Exposure_Index  0x500f
 #define PDV_Exposure_Index_ISO_100        0x0064
 #define PDV_Exposure_Index_ISO_200        0x00c8
@@ -55,7 +55,7 @@ extern const prop_t prop_exposure_index;
 #define PDV_Exposure_Index_ISO_12800      0x3200
 #define PDV_Exposure_Index_ISO_25600      0x6400
 
-extern const prop_t prop_exposure_time;
+extern prop_t prop_exposure_time;
 #define PDV_Exposure_Time  0x500d
 #define PDV_Exposure_Time_100_msecs       0x00002673
 #define PDV_Exposure_Time_1_sec           0x000f4240

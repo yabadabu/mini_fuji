@@ -146,44 +146,44 @@ const char*   prop_get_value_str( prop_t* p ) {
 }
 
 const uint16_t prop_quality_values[] = { 0x0001, 0x0002, 0x0003, 0x0004, 0x0005};
-const prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 5, .enums_data = &prop_quality_values };
+prop_t prop_quality = { .id = 0xd018, .name = "Quality", .data_type = PDT_U16,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 5, .enums_data = &prop_quality_values };
 const uint16_t prop_priority_mode_values[] = { 0x0001, 0x0002};
-const prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 2, .enums_data = &prop_priority_mode_values };
+prop_t prop_priority_mode = { .id = 0xd207, .name = "Priority Mode", .data_type = PDT_U16,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 2, .enums_data = &prop_priority_mode_values };
 const uint16_t prop_capture_control_values[] = { 0x0200, 0x0304};
-const prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 2, .enums_data = &prop_capture_control_values };
-const prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES,
-                              .read_only = true, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 0, .enums_data = 0 };
+prop_t prop_capture_control = { .id = 0xd208, .name = "Capture Control", .data_type = PDT_U16,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 2, .enums_data = &prop_capture_control_values };
+prop_t prop_pending_events = { .id = 0xd212, .name = "Pending Events", .data_type = PDT_ARRAY_PROP_VALUES,
+                        .read_only = true, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 0, .enums_data = 0 };
 const uint16_t prop_pre_capture_delay_values[] = { 0x0000, 0x07d0, 0x2710};
-const prop_t prop_pre_capture_delay = { .id = 0x5012, .name = "Pre Capture Delay", .data_type = PDT_U16,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 3, .enums_data = &prop_pre_capture_delay_values };
+prop_t prop_pre_capture_delay = { .id = 0x5012, .name = "Pre Capture Delay", .data_type = PDT_U16,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 3, .enums_data = &prop_pre_capture_delay_values };
 const uint16_t prop_focus_mode_values[] = { 0x0001, 0x8001, 0x8002};
-const prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 3, .enums_data = &prop_focus_mode_values };
+prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_U16,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 3, .enums_data = &prop_focus_mode_values };
 const uint32_t prop_exposure_index_values[] = { 0x0064, 0x00c8, 0x0320, 0x03e8, 0x04e2, 0x0640, 0x07D0, 0x0c80, 0x1900, 0x3200, 0x6400};
-const prop_t prop_exposure_index = { .id = 0x500f, .name = "Exposure Index", .data_type = PDT_U32,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 11, .enums_data = &prop_exposure_index_values };
+prop_t prop_exposure_index = { .id = 0x500f, .name = "Exposure Index", .data_type = PDT_U32,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 11, .enums_data = &prop_exposure_index_values };
 const uint32_t prop_exposure_time_values[] = { 0x00002673, 0x000f4240, 0x00133991, 0x001836c9, 0x001e8480, 0x00267522, 0x00307192, 0x003d0900, 0x004ce644, 0x0060e324, 0x007a1200, 0x0099cc88, 0x00c1c648, 0x00f42400, 0x01339910, 0x01838c90, 0x01e84800, 0x02673221, 0x03071921, 0x03d09000, 0x03d0901e, 0x03d0903c, 0x03d0905a, 0x03d09078};
-const prop_t prop_exposure_time = { .id = 0x500d, .name = "Exposure Time", .data_type = PDT_U32,
-                              .read_only = false, .ivalue = 0, 
-                              .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                              .num_enums = 24, .enums_data = &prop_exposure_time_values };
+prop_t prop_exposure_time = { .id = 0x500d, .name = "Exposure Time", .data_type = PDT_U32,
+                        .read_only = false, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 24, .enums_data = &prop_exposure_time_values };
 
 
 const prop_t* props[] = {

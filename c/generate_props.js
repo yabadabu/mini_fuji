@@ -55,7 +55,7 @@ prop_pointers.push( 'const prop_t* props[] = {')
 
 
 function add_extern_decl( name ) {
-  headers.push( `\nextern const prop_t prop_${name};` );
+  headers.push( `\nextern prop_t prop_${name};` );
 }
 
 function add_extern_value( c_name, value ) {
@@ -105,10 +105,10 @@ function export_prop( Name, p ) {
     body.push( enum_data_header + enum_data_values + '};' )
   }
 
-  body.push( `const prop_t prop_${name} = { .id = ${id_cval}, .name = "${Name}", .data_type = PDT_${p.dt},` )
-  body.push( `                              .read_only = ${p.read_only ? true : false}, .ivalue = 0, `)
-  body.push( `                              .blob = { .count = 0, .data = 0, .reserved = 0 }, `)
-  body.push( `                              .num_enums = ${num_enums}, .enums_data = ${enums_data_pointer} };`)
+  body.push( `prop_t prop_${name} = { .id = ${id_cval}, .name = "${Name}", .data_type = PDT_${p.dt},` )
+  body.push( `                        .read_only = ${p.read_only ? true : false}, .ivalue = 0, `)
+  body.push( `                        .blob = { .count = 0, .data = 0, .reserved = 0 }, `)
+  body.push( `                        .num_enums = ${num_enums}, .enums_data = ${enums_data_pointer} };`)
 
   prop_find.push( `    case 0x${p.id}: return &prop_${name};` );
 
