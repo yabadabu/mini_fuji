@@ -65,8 +65,10 @@ cmd_t cmd_set_prop = {
 int parse_get_storage_ids( const blob_t* args, void* output ) {
   storage_ids_t* out_ids = (storage_ids_t*) output;
   out_ids->count = blob_read_u32le( args, 0 );
-  if( out_ids->count > 3 )
-    out_ids->count = 3;
+  if( out_ids->count > max_storage_id_t ) {
+    // Some data will not be recovered
+    out_ids->count = max_storage_id_t;
+  }
   for( int i=0; i<out_ids->count; ++i ) {
     uint32_t id = blob_read_u32le( args, 4 + i * 4 );
     out_ids->ids[i].id = id;
@@ -84,8 +86,10 @@ cmd_t cmd_get_storage_ids = {
 int parse_get_obj_handles( const blob_t* args, void* output ) {
   handles_t* out_ids = (handles_t*) output;
   out_ids->count = blob_read_u32le( args, 0 );
-  if( out_ids->count > 3 )
-    out_ids->count = 3;
+  if( out_ids->count > max_handles_t ) {
+    // Some data will not be recovered
+    out_ids->count = max_handles_t;
+  }
   for( int i=0; i<out_ids->count; ++i ) {
     uint32_t id = blob_read_u32le( args, 4 + i * 4 );
     out_ids->handles[i].value = id;
@@ -127,9 +131,9 @@ cmd_t cmd_get_thumbnail = {
 int parse_partial_obj( const blob_t* args, void* output ) {
   blob_t* b = (blob_t*) output;
   assert( b && args );
-  // The camera is sending an extra 4 bytes with the offset where the block is meant
+  // The camera is sending an extra 4 bytes with the offset where the block is recv
   uint32_t sz = blob_size( args );
-  if( sz > 4 )
+  if( sz >= 4 )
     blob_append_data( b, args->data, sz - 4 );
   return 0; 
 }

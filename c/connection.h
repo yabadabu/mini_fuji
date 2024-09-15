@@ -69,6 +69,8 @@ typedef struct {
   int32_t          ivalue;
   blob_t           blob;
   bool             read_only;
+  int32_t          num_enums;
+  const void*      enums_data;
 } prop_t;
 
 // ---------------------------------------
@@ -76,18 +78,20 @@ typedef struct {
   uint32_t id;
 } storage_id_t;
 
+#define max_storage_id_t    3
 typedef struct { 
   int32_t  count;
-  storage_id_t ids[3];
+  storage_id_t ids[max_storage_id_t];
 } storage_ids_t;
 
 typedef struct { 
   int32_t value; 
 } handle_t;
 
+#define max_handles_t       7
 typedef struct { 
   int32_t  count;
-  handle_t handles[7];
+  handle_t handles[max_handles_t];
 } handles_t;
 
 int ptpip_initialize( conn_t* conn );

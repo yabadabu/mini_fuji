@@ -12,7 +12,7 @@ demo : ${OBJS} ${DEPS}
 	cc ${OBJS} -o ${APP}
 	./${APP}
 
-properties.h : generate_props.js
+properties.h : generate_props.js property_defs.js
 	node generate_props.js
 
 $(OBJS_PATH) :

@@ -340,12 +340,33 @@ bool test_prop_value( ) {
   assert( strcmp( prop_val, "Normal" ) == 0 );
   
   p0 = prop_exposure_time;
-  p0.ivalue = PDV_Exposure_Time_5secs;
+  p0.ivalue = PDV_Exposure_Time_5_secs;
   prop_val = prop_get_value_str( &p0 );
   printf( "For prop %s, val 0x%04x is %s\n", p0.name, p0.ivalue, prop_val );
   assert( strcmp( prop_val, "5 secs" ) == 0 );
 
   return true;
+}
+
+bool test_props() {
+  test_prop_value();
+
+  bool dump_all_values = true;
+  if( dump_all_values ) { 
+    const prop_t** props = prop_get_all();
+    while( *props ) {
+      prop_t p = *(*props++);
+
+      printf( "Prop %04x %s\n", p.id, p.name);
+      int n = 0;
+      while( prop_get_nth_value( &p, n, &p.ivalue ) ) {
+        printf( "  [%2d] %08x %s\n", n, p.ivalue, prop_get_value_str( &p ));
+        ++n;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool test_channels() {
@@ -396,6 +417,8 @@ bool take_shot() {
   // set camera info?
   conn_create( c );
 
+  c->on_event = (callback_event_t){ .context = NULL, .callback = &notify_event };
+
   char conn_str[128] = {"tcp:"};
   strcat(conn_str, camera_info.ip);
   printf( "Connecting to >>%s<<\n", conn_str );
@@ -414,7 +437,7 @@ bool take_shot() {
   ptpip_open_session( c );
   wait_until_cmd_processed( c );
 
-  // Via wifi at least these reports 2 storages, one for SDRam of stills, and another for the video preview
+  // Via wifi at least this reports 2 storages, one for SDRam of stills, and another for the video preview
   storage_ids_t storage_ids;
   ptpip_get_storage_ids( c, &storage_ids );
   wait_until_cmd_processed( c );
@@ -429,7 +452,7 @@ bool take_shot() {
 
   set_prop( c, &prop_quality, PDV_Quality_Normal);
 
-  p.ivalue = 0xffff;
+  p.ivalue = 0xffff;    // Just to confirm it's changing
   ptpip_get_prop( c, &p );
   wait_until_cmd_processed( c );
   assert( p.ivalue == PDV_Quality_Normal );
@@ -462,7 +485,7 @@ bool take_shot() {
   // wait_until_cmd_processed( c );
   // printf( "get_prop( %s ) complete %s => %02x (%s)\n", p2.name, ptpip_error_msg( conn_get_last_ptpip_return_code( c ) ), p2.ivalue, prop_get_value_str( &p2 ) );
   
-  set_prop( c, &prop_exposure_time, PDV_Exposure_Time_5secs);
+  set_prop( c, &prop_exposure_time, PDV_Exposure_Time_5_secs);
   
   set_prop( c, &prop_capture_control, PDV_Capture_Control_AutoFocus);
 
