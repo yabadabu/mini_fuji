@@ -122,6 +122,7 @@ op_code_t action_take[] = {
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
 //  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
 
+  // This is required... even when we don't want autofocus
   { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_AutoFocus },
   { OC_INITIATE_CAPTURE, },
   { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_Shoot },
@@ -286,7 +287,7 @@ bool eval_step( evaluation_t* ev ) {
           ptpip_get_prop( c, prop );
           eval_next_substep( ev );
         } else {
-          printf( "GET_PROP_ARRAY[%d] %04x:%s => %04x(%s) (RC:%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) )); 
+          printf( "GET_PROP_ARRAY[%d] %04x:%s => %08x (%s) (RC:%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) )); 
           prop_arr_set( ev->custom_props, prop_id, prop->ivalue );
           eval_next_iteration( ev );
         }
@@ -307,7 +308,7 @@ bool eval_step( evaluation_t* ev ) {
       if( prop ) {
         if( !prop->read_only ) {
           prop_arr_get( ev->custom_props, prop_id, &prop->ivalue );
-          printf( "SET_PROP_ARRAY[%d] %04x:%s => %04x(%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
+          printf( "SET_PROP_ARRAY[%d] %04x:%s => %08x (%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
           ptpip_set_prop( c, prop );
           eval_next_iteration( ev );
         } else {
@@ -433,7 +434,9 @@ bool test_evals() {
   prop_arr_clear( &parr );
   prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
   prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
-  //prop_arr_dump( &parr );
+  prop_arr_set( &parr, PDV_Exposure_Time,  PDV_Exposure_Time_5_secs );
+  prop_arr_dump( &parr );
+  //return false;
 
   ev.custom_props = &parr;
 
