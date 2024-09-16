@@ -101,7 +101,7 @@ op_code_t action_take[] = {
   { OC_READ_STORAGE_IDS  },
   { OC_GET_PROP_ARRAY,   NULL,                  0 },
   { OC_SET_PROP_ARRAY,   NULL,                  0 },
-  { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
+//  { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
 //  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
 
@@ -414,7 +414,7 @@ bool test_evals() {
 
   prop_array_t parr;
   prop_arr_clear( &parr );
-  prop_arr_set( &parr, PDV_Quality, PDV_Quality_Fine );
+  prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
   prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
 
   ev.custom_props = &parr;
