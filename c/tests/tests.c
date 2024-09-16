@@ -375,22 +375,7 @@ bool test_channels() {
   return true;
 }
 
-void download_progress( void* context, uint32_t curr, uint32_t required ) {
-  if( curr < required ) {
-    float ratio = (float) curr / (float) required;
-    if( ratio > 1.0 )
-      ratio = 1.0f;
-    printf( "\rdownload_progress %d/%d (%.2f)%%", curr, required, ratio * 100.0f );
-    fflush( stdout );
-  } else {
-    printf( "\rdownload_progress Complete\n" );
-  }
-}
-
-void notify_event( void* context, const char* event_str ) {
-  printf( "Evt: %s\n", event_str );
-}
-
+extern void download_progress( void* context, uint32_t curr, uint32_t required );
 
 bool take_shot() {
   printf( "Take shot starts...\n");
@@ -420,8 +405,6 @@ bool take_shot() {
   conn_t* c = &conn;
   // set camera info?
   conn_create( c );
-
-  c->on_event = (callback_event_t){ .context = NULL, .callback = &notify_event };
 
   char conn_str[128] = {"tcp:"};
   strcat(conn_str, camera_info.ip);

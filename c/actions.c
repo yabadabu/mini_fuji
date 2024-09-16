@@ -4,46 +4,9 @@
 #include "connection.h"
 #include "discovery.h"
 #include "properties.h"
-
-extern void download_progress( void* context, uint32_t curr, uint32_t required );
-extern void notify_event( void* context, const char* event_str );
-
-enum eOpCode {
-  OC_INVALID = 0,
-  OP_DISCOVER_CAMERA,
-  OP_CONNECT_TO_CAMERA, 
-  OC_READ_STORAGE_IDS,
-  OC_READ_OBJ_HANDLES,
-  OC_SET_PROP,
-  OC_GET_PROP_ARRAY,
-  OC_SET_PROP_ARRAY,
-  OC_INITIATE_CAPTURE,
-  OC_TERMINATE_CAPTURE,
-  OC_WAIT_SHOOT_ENDS,
-  OC_SAVE_IMAGES,
-  OC_DELETE_IMAGES,
-  OC_END_OF_PROGRAM,
-};
-
-typedef struct {
-  enum eOpCode op_code;
-  prop_t*      prop;
-  uint32_t     ivalue;
-} op_code_t;
+#include "actions.h"
 
 // ------------------------------------------------------
-#define max_props_in_array        16
-typedef struct {
-  uint32_t     count;
-  uint32_t     ids[ max_props_in_array ];
-  uint32_t     ivalues[ max_props_in_array ];
-} prop_array_t;
-
-void prop_arr_clear( prop_array_t* prar );
-int  prop_arr_set( prop_array_t* prar, uint32_t prop_id, uint32_t ivalue );
-bool prop_arr_del( prop_array_t* prar, uint32_t prop_id );
-bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue );
-
 int prop_arr_find_idx( prop_array_t* prar, uint32_t prop_id ) {
   assert( prar );
   uint32_t* ids = prar->ids;
@@ -110,52 +73,6 @@ bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue ) 
   return true;
 }
 
-
-// ------------------------------------------------------
-op_code_t action_take[] = {
-  { OP_DISCOVER_CAMERA   },
-  { OP_CONNECT_TO_CAMERA },
-  { OC_READ_STORAGE_IDS  },
-  { OC_GET_PROP_ARRAY,   NULL,                  0 },
-  { OC_SET_PROP_ARRAY,   NULL,                  0 },
-//  { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
-//  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
-
-  // This is required... even when we don't want autofocus
-  { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_AutoFocus },
-  { OC_INITIATE_CAPTURE, },
-  { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_Shoot },
-  { OC_INITIATE_CAPTURE, },
-
-  { OC_WAIT_SHOOT_ENDS,  },
-  { OC_READ_OBJ_HANDLES  },
-  { OC_SAVE_IMAGES       },
-  { OC_DELETE_IMAGES     },
-  { OC_TERMINATE_CAPTURE },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
-  { OC_END_OF_PROGRAM    }
-};
-
-typedef struct {
-  op_code_t*    actions;
-  conn_t*       conn;
-  int           max_time_per_step;
-
-  // Runtime
-  int           ip;
-  int           steps_in_ip;
-  int           iteration;
-
-  // context ..
-  storage_ids_t storage_ids;
-  handles_t     handles;
-  blob_t        download_buffer;
-  camera_info_t camera_info;
-  prop_array_t* custom_props;
-
-} evaluation_t;
-
 void eval_create( evaluation_t* ev, conn_t* c, op_code_t* actions ) {
   ev->actions = actions;
   ev->ip = 0;
@@ -163,7 +80,6 @@ void eval_create( evaluation_t* ev, conn_t* c, op_code_t* actions ) {
   ev->iteration = 0;
   ev->conn = c;
   ev->max_time_per_step = 1000;
-  c->on_event = (callback_event_t){ .context = NULL, .callback = &notify_event };
   blob_create( &ev->download_buffer, 0, 64 * 1024 );
 }
 
@@ -307,18 +223,19 @@ bool eval_step( evaluation_t* ev ) {
       prop_t* prop = prop_by_id( prop_id );
       if( prop ) {
         if( !prop->read_only ) {
-          prop_arr_get( ev->custom_props, prop_id, &prop->ivalue );
-          printf( "SET_PROP_ARRAY[%d] %04x:%s => %08x (%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
-          ptpip_set_prop( c, prop );
-          eval_next_iteration( ev );
+          if( prop_arr_get( ev->custom_props, prop_id, &prop->ivalue ) ) {
+            printf( "SET_PROP_ARRAY[%d] %04x:%s => %08x (%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
+            ptpip_set_prop( c, prop );
+          } else {
+            printf( "SET_PROP_ARRAY[%d].Property %04x is read-only\n", ev->iteration, prop_id );
+          }
         } else {
           printf( "SET_PROP_ARRAY.Property %04x is read-only\n", prop_id );
-          eval_next_iteration( ev );
         }
       } else {
         printf( "SET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
-        eval_next_iteration( ev );
       }
+      eval_next_iteration( ev );
     } else {
       eval_next_ip( ev );
     }
@@ -372,12 +289,12 @@ bool eval_step( evaluation_t* ev ) {
     if( ev->iteration < ev->handles.count ) {
       handle_t h = ev->handles.handles[ ev->iteration ];
       if( ev->steps_in_ip == 0 ) {
-        c->on_progress = (callback_progress_t){ .context = NULL, .callback = &download_progress };
+        c->on_progress.enabled = true;
         ptpip_get_obj( c, h, &ev->download_buffer );
         eval_next_substep( ev );
       }
       else if( ev->steps_in_ip == 1 ) {
-        clear_callback_progress( &c->on_progress );
+        c->on_progress.enabled = false;
         char ofilename[256];
         sprintf( ofilename, "img_%04d.jpg", ev->iteration );
         printf( "Saving %d bytes to %s\n", blob_size( &ev->download_buffer ), ofilename );
@@ -415,34 +332,4 @@ bool eval_step( evaluation_t* ev ) {
   return false;
 }
 
-// ---------------------------------
-static void show_waiting_answer() {
-  char tc[5] = "\\|/-";
-  static int idx = 0;
-  //printf( "\rWaiting answer from the camera... %c", tc[idx] );
-  //fflush( stdout );
-  idx = ( idx + 1 ) % 4;
-}
 
-bool test_evals() {
-  conn_t       conn;
-  conn_create( &conn );
-  evaluation_t ev;
-  eval_create( &ev, &conn, action_take );
-
-  prop_array_t parr;
-  prop_arr_clear( &parr );
-  prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
-  prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
-  prop_arr_set( &parr, PDV_Exposure_Time,  PDV_Exposure_Time_5_secs );
-  prop_arr_dump( &parr );
-  //return false;
-
-  ev.custom_props = &parr;
-
-  printf( "eval_step starts\n" );
-  while( !eval_step( &ev )) {
-    show_waiting_answer();
-  }
-  return false;
-}
