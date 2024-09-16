@@ -14,6 +14,7 @@ typedef struct {
 typedef struct {
    void*  context;
    void (*callback)( void* context, uint32_t current, uint32_t required );
+   bool   enabled;
 } callback_progress_t;
 
 typedef struct {
@@ -42,6 +43,7 @@ typedef struct {
   callback_event_t    on_event;
 
   bool                trace_io;
+  bool                trace_processed_packets;
 } conn_t;
 
 bool conn_create( conn_t* );

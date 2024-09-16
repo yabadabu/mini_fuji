@@ -31,6 +31,7 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs );
 void clear_callback_progress( callback_progress_t* cb ) {
   cb->context = NULL;
   cb->callback = NULL;
+  cb->enabled = false;
 }
 
 void clear_callback_event( callback_event_t* cb ) {
@@ -62,6 +63,7 @@ bool conn_create( conn_t* conn ) {
 
   conn->sequence_id = 1;
   conn->trace_io = false;
+  conn->trace_processed_packets = false;
   conn_clear_state( conn );
 
   clear_callback_progress( &conn->on_progress );
@@ -102,7 +104,7 @@ void conn_recv( conn_t* conn, const blob_t* new_data ) {
   blob_append_blob( &conn->recv_data, new_data );
   
   // Report to the progress callback
-  if( conn->on_progress.callback ) {
+  if( conn->on_progress.enabled && conn->on_progress.callback ) {
     uint32_t required_bytes = 0;
     conn_has_packet_ready( conn, &required_bytes );
     uint32_t bytes_in_buffer = blob_size( &conn->recv_data );
@@ -157,8 +159,10 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   args.count = packet_size - offset_payload;
   args.reserved = 0;
 
-  printf( "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
-  blob_dump( &args );
+  if( conn->trace_processed_packets ) {
+    printf( "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
+    blob_dump( &args );
+  }
 
   // expect seq_id == otf_msg->seq_id
   assert( msg_type == msg_type_data || msg_type == msg_type_end || msg_type == msg_type_init );

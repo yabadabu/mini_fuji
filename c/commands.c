@@ -29,7 +29,6 @@ int parse_get_prop( const blob_t* args, void* output ) {
   prop_t* prop = (prop_t*) output;
   assert( output );
   
-  printf( "Parsing get_prop answer\n" );
 
   if( prop->data_type == PDT_U16 ) {
     assert( blob_size( args ) == 2 );
@@ -45,6 +44,9 @@ int parse_get_prop( const blob_t* args, void* output ) {
     // Store the full stream here
     blob_create( &prop->blob, 0, blob_size( args ) );
     blob_append_blob( &prop->blob, args );
+    
+  } else {
+    printf( "Parsing get_prop answer\n" );
   }
 
   return 0; 
