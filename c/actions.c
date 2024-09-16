@@ -8,7 +8,6 @@
 extern void download_progress( void* context, uint32_t curr, uint32_t required );
 extern void notify_event( void* context, const char* event_str );
 
-
 enum eOpCode {
   OC_INVALID = 0,
   OP_DISCOVER_CAMERA,
@@ -28,9 +27,73 @@ enum eOpCode {
 typedef struct {
   enum eOpCode op_code;
   prop_t*      prop;
-  uint32_t     arg2;
+  uint32_t     ivalue;
 } op_code_t;
 
+// ------------------------------------------------------
+#define max_props_in_array        16
+typedef struct {
+  uint32_t     count;
+  uint32_t     prop_ids[ max_props_in_array ];
+  uint32_t     ivalues[ max_props_in_array ];
+} prop_array_t;
+
+void prop_arr_clear( prop_array_t* prar );
+int  prop_arr_set( prop_array_t* prar, uint32_t prop_id, uint32_t ivalue );
+bool prop_arr_del( prop_array_t* prar, uint32_t prop_id );
+bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue );
+
+int prop_arr_find_idx( prop_array_t* prar, uint32_t prop_id ) {
+  assert( prar );
+  uint32_t* ids = prar->prop_ids;
+  for( int i=0; i<prar->count; ++i, ++ids ) {
+    if( *ids == prop_id )
+      return i;
+  } 
+  return -1;
+}
+
+void prop_arr_clear( prop_array_t* prar ) {
+  prar->count = 0;
+}
+
+int prop_arr_set( prop_array_t* prar, uint32_t prop_id, uint32_t ivalue ) {
+  int idx = prop_arr_find_idx( prar, prop_id );
+  if( idx >= 0 ) {
+    prar->ivalues[idx] = ivalue;
+    return idx;
+  }
+  if( prar->count >= max_props_in_array )
+    return -1;
+  // Register a new value
+  prar->ivalues[ prar->count ] = ivalue;
+  prar->count++;
+  return prar->count - 1;
+}
+
+bool prop_arr_del( prop_array_t* prar, uint32_t prop_id ) {
+  int idx = prop_arr_find_idx( prar, prop_id );
+  if( idx < 0 )
+    return false;
+  uint32_t last_idx = prar->count - 1;
+  if( idx != last_idx ) {
+    prar->prop_ids[ idx ] = prar->prop_ids[ last_idx ];
+    prar->ivalues[ idx ] = prar->ivalues[ last_idx ];
+  }
+  --prar->count;
+  return true;
+}
+
+bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue ) {
+  int idx = prop_arr_find_idx( prar, prop_id );
+  if( idx < 0 )
+    return false;
+  *out_ivalue = prar->ivalues[ idx ];
+  return true;
+}
+
+
+// ------------------------------------------------------
 op_code_t action_take[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
@@ -49,6 +112,7 @@ op_code_t action_take[] = {
   { OC_READ_OBJ_HANDLES  },
   { OC_SAVE_IMAGES       },
   { OC_DELETE_IMAGES     },
+  { OC_TERMINATE_CAPTURE },
   { OC_END_OF_PROGRAM    }
 };
 
@@ -67,6 +131,7 @@ typedef struct {
   handles_t     handles;
   blob_t        download_buffer;
   camera_info_t camera_info;
+  prop_array_t  custom_props;
 
 } evaluation_t;
 
@@ -194,7 +259,7 @@ bool eval_step( evaluation_t* ev ) {
 
   case OC_SET_PROP: {
     prop_t* p = cmd->prop;
-    p->ivalue = cmd->arg2;
+    p->ivalue = cmd->ivalue;
     printf( "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
     ptpip_set_prop( c, p );
     eval_next_ip( ev );
