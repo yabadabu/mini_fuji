@@ -66,7 +66,7 @@ typedef struct {
   uint16_t         id; 
   const char*      name;
   enum eValueType  data_type;
-  int32_t          ivalue;
+  uint32_t         ivalue;
   blob_t           blob;
   bool             read_only;
   int32_t          num_enums;
