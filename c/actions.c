@@ -15,7 +15,8 @@ enum eOpCode {
   OC_READ_STORAGE_IDS,
   OC_READ_OBJ_HANDLES,
   OC_SET_PROP,
-  OC_SET_PROPS,
+  OC_GET_PROP_ARRAY,
+  OC_SET_PROP_ARRAY,
   OC_INITIATE_CAPTURE,
   OC_TERMINATE_CAPTURE,
   OC_WAIT_SHOOT_ENDS,
@@ -34,7 +35,7 @@ typedef struct {
 #define max_props_in_array        16
 typedef struct {
   uint32_t     count;
-  uint32_t     prop_ids[ max_props_in_array ];
+  uint32_t     ids[ max_props_in_array ];
   uint32_t     ivalues[ max_props_in_array ];
 } prop_array_t;
 
@@ -45,7 +46,7 @@ bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue );
 
 int prop_arr_find_idx( prop_array_t* prar, uint32_t prop_id ) {
   assert( prar );
-  uint32_t* ids = prar->prop_ids;
+  uint32_t* ids = prar->ids;
   for( int i=0; i<prar->count; ++i, ++ids ) {
     if( *ids == prop_id )
       return i;
@@ -77,7 +78,7 @@ bool prop_arr_del( prop_array_t* prar, uint32_t prop_id ) {
     return false;
   uint32_t last_idx = prar->count - 1;
   if( idx != last_idx ) {
-    prar->prop_ids[ idx ] = prar->prop_ids[ last_idx ];
+    prar->ids[ idx ] = prar->ids[ last_idx ];
     prar->ivalues[ idx ] = prar->ivalues[ last_idx ];
   }
   --prar->count;
@@ -98,6 +99,8 @@ op_code_t action_take[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
   { OC_READ_STORAGE_IDS  },
+  { OC_GET_PROP_ARRAY,   NULL,                  0 },
+  { OC_SET_PROP_ARRAY,   NULL,                  0 },
   { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
 //  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
@@ -108,11 +111,11 @@ op_code_t action_take[] = {
   { OC_INITIATE_CAPTURE, },
 
   { OC_WAIT_SHOOT_ENDS,  },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
   { OC_READ_OBJ_HANDLES  },
   { OC_SAVE_IMAGES       },
   { OC_DELETE_IMAGES     },
   { OC_TERMINATE_CAPTURE },
+  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
   { OC_END_OF_PROGRAM    }
 };
 
@@ -131,7 +134,7 @@ typedef struct {
   handles_t     handles;
   blob_t        download_buffer;
   camera_info_t camera_info;
-  prop_array_t  custom_props;
+  prop_array_t* custom_props;
 
 } evaluation_t;
 
@@ -257,6 +260,52 @@ bool eval_step( evaluation_t* ev ) {
     }
     break;
 
+  case OC_GET_PROP_ARRAY:
+    if( ev->custom_props && ev->iteration < ev->custom_props->count ) {
+      uint32_t prop_id = ev->custom_props->ids[ ev->iteration ];
+      prop_t* prop = prop_by_id( prop_id );
+      if( prop ) {
+        if( sub_step == 0 ) {
+          ptpip_get_prop( c, prop );
+          eval_next_substep( ev );
+        } else {
+          printf( "GET_PROP_ARRAY[%d] %04x:%s => %04x(%s) (RC:%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) )); 
+          prop_arr_set( ev->custom_props, prop_id, prop->ivalue );
+          eval_next_iteration( ev );
+        }
+      } else {
+        // If the prop is not registered report and try the next one
+        printf( "GET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
+        eval_next_iteration( ev );
+      }
+    } else {
+      eval_next_ip( ev );
+    }
+    break;
+
+  case OC_SET_PROP_ARRAY:
+    if( ev->custom_props && ev->iteration < ev->custom_props->count ) {
+      uint32_t prop_id = ev->custom_props->ids[ ev->iteration ];
+      prop_t* prop = prop_by_id( prop_id );
+      if( prop ) {
+        if( !prop->read_only ) {
+          prop_arr_get( ev->custom_props, prop_id, &prop->ivalue );
+          printf( "SET_PROP_ARRAY[%d] %04x:%s => %04x(%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
+          ptpip_set_prop( c, prop );
+          eval_next_iteration( ev );
+        } else {
+          printf( "SET_PROP_ARRAY.Property %04x is read-only\n", prop_id );
+          eval_next_iteration( ev );
+        }
+      } else {
+        printf( "SET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
+        eval_next_iteration( ev );
+      }
+    } else {
+      eval_next_ip( ev );
+    }
+    break;
+
   case OC_SET_PROP: {
     prop_t* p = cmd->prop;
     p->ivalue = cmd->ivalue;
@@ -362,6 +411,13 @@ bool test_evals() {
   conn_create( &conn );
   evaluation_t ev;
   eval_create( &ev, &conn, action_take );
+
+  prop_array_t parr;
+  prop_arr_clear( &parr );
+  prop_arr_set( &parr, PDV_Quality, PDV_Quality_Fine );
+  prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
+
+  ev.custom_props = &parr;
 
   printf( "eval_step starts\n" );
   while( !eval_step( &ev )) {

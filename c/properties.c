@@ -23,7 +23,7 @@ bool prop_get_nth_value( prop_t* prop, uint32_t idx, void* out_value ) {
   return false;
 }
 
-const prop_t* prop_by_id( uint16_t prop_id ) {
+prop_t* prop_by_id( uint16_t prop_id ) {
   switch( prop_id ) {
     case 0xd018: return &prop_quality;
     case 0xd207: return &prop_priority_mode;
