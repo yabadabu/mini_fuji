@@ -58,6 +58,22 @@ void prop_arr_clear( prop_array_t* prar ) {
   prar->count = 0;
 }
 
+void prop_arr_dump( prop_array_t* prar ) {
+  printf( "Property Array contains %d properties/values\n", prar->count );
+  for( int i=0; i<prar->count; ++i ) {
+    uint32_t prop_id = prar->ids[ i ];
+    uint32_t ivalue = prar->ivalues[ i ];
+    uint32_t read_value = 0xffffffff;
+    bool found = prop_arr_get( prar, prop_id, &read_value );
+    assert( found );
+    assert( read_value == ivalue );
+    prop_t* p = prop_by_id( prop_id );
+    assert( p );
+    p->ivalue = ivalue;
+    printf( "  [%d] 0x%04x:%32s => %08x (%s)\n", i, p->id, p->name, p->ivalue, prop_get_value_str( p ) ); 
+  }
+}
+
 int prop_arr_set( prop_array_t* prar, uint32_t prop_id, uint32_t ivalue ) {
   int idx = prop_arr_find_idx( prar, prop_id );
   if( idx >= 0 ) {
@@ -67,6 +83,7 @@ int prop_arr_set( prop_array_t* prar, uint32_t prop_id, uint32_t ivalue ) {
   if( prar->count >= max_props_in_array )
     return -1;
   // Register a new value
+  prar->ids[ prar->count ] = prop_id;
   prar->ivalues[ prar->count ] = ivalue;
   prar->count++;
   return prar->count - 1;
@@ -416,6 +433,7 @@ bool test_evals() {
   prop_arr_clear( &parr );
   prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
   prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
+  //prop_arr_dump( &parr );
 
   ev.custom_props = &parr;
 
