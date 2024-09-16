@@ -104,6 +104,7 @@ const char*   prop_get_value_str( prop_t* p ) {
         case PDV_Exposure_Index_ISO_6400     : return "ISO 6400";
         case PDV_Exposure_Index_ISO_12800    : return "ISO 12800";
         case PDV_Exposure_Index_ISO_25600    : return "ISO 25600";
+        case PDV_Exposure_Index_ISO_Auto     : return "ISO Auto";
         default: break;
       }
       break;
@@ -111,7 +112,41 @@ const char*   prop_get_value_str( prop_t* p ) {
 
     case 0x500d: {  // exposure_time
       switch( p->ivalue ) {
-        case PDV_Exposure_Time_100_msecs     : return "100 msecs";
+        case PDV_Exposure_Time_1_8000_sec    : return "1/8000 sec";
+        case PDV_Exposure_Time_1_6400_sec    : return "1/6400 sec";
+        case PDV_Exposure_Time_1_5000_sec    : return "1/5000 sec";
+        case PDV_Exposure_Time_1_4000_sec    : return "1/4000 sec";
+        case PDV_Exposure_Time_1_3200_sec    : return "1/3200 sec";
+        case PDV_Exposure_Time_1_2500_sec    : return "1/2500 sec";
+        case PDV_Exposure_Time_1_1600_sec    : return "1/1600 sec";
+        case PDV_Exposure_Time_1_1250_sec    : return "1/1250 sec";
+        case PDV_Exposure_Time_1_1000_sec    : return "1/1000 sec";
+        case PDV_Exposure_Time_1_800_sec     : return "1/800 sec";
+        case PDV_Exposure_Time_1_640_sec     : return "1/640 sec";
+        case PDV_Exposure_Time_1_500_sec     : return "1/500 sec";
+        case PDV_Exposure_Time_1_400_sec     : return "1/400 sec";
+        case PDV_Exposure_Time_1_320_sec     : return "1/320 sec";
+        case PDV_Exposure_Time_1_250_sec     : return "1/250 sec";
+        case PDV_Exposure_Time_1_200_sec     : return "1/200 sec";
+        case PDV_Exposure_Time_1_160_sec     : return "1/160 sec";
+        case PDV_Exposure_Time_1_125_sec     : return "1/125 sec";
+        case PDV_Exposure_Time_1_100_sec     : return "1/100 sec";
+        case PDV_Exposure_Time_1_80_sec      : return "1/80 sec";
+        case PDV_Exposure_Time_1_60_sec      : return "1/60 sec";
+        case PDV_Exposure_Time_1_50_sec      : return "1/50 sec";
+        case PDV_Exposure_Time_1_40_sec      : return "1/40 sec";
+        case PDV_Exposure_Time_1_30_sec      : return "1/30 sec";
+        case PDV_Exposure_Time_1_25_sec      : return "1/25 sec";
+        case PDV_Exposure_Time_1_20_sec      : return "1/20 sec";
+        case PDV_Exposure_Time_1_15_sec      : return "1/15 sec";
+        case PDV_Exposure_Time_1_13_sec      : return "1/13 sec";
+        case PDV_Exposure_Time_1_10_sec      : return "1/10 sec";
+        case PDV_Exposure_Time_1_8_sec       : return "1/8 sec";
+        case PDV_Exposure_Time_1_6_sec       : return "1/6 sec";
+        case PDV_Exposure_Time_1_5_sec       : return "1/5 sec";
+        case PDV_Exposure_Time_1_4_sec       : return "1/4 sec";
+        case PDV_Exposure_Time_1_3_sec       : return "1/3 sec";
+        case PDV_Exposure_Time_1_2_sec       : return "1/2 sec";
         case PDV_Exposure_Time_1_sec         : return "1 sec";
         case PDV_Exposure_Time_1_3_secs      : return "1.3 secs";
         case PDV_Exposure_Time_1_5_secs      : return "1.5 secs";
@@ -174,16 +209,16 @@ prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_
                         .read_only = false, .ivalue = 0, 
                         .blob = { .count = 0, .data = 0, .reserved = 0 }, 
                         .num_enums = 3, .enums_data = &prop_focus_mode_values };
-const uint32_t prop_exposure_index_values[] = { 0x0064, 0x00c8, 0x0320, 0x03e8, 0x04e2, 0x0640, 0x07D0, 0x0c80, 0x1900, 0x3200, 0x6400};
+const uint32_t prop_exposure_index_values[] = { 0x00000064, 0x000000c8, 0x00000320, 0x000003e8, 0x000004e2, 0x00000640, 0x000007D0, 0x00000c80, 0x00001900, 0x00003200, 0x00006400, 0xffffffff};
 prop_t prop_exposure_index = { .id = 0x500f, .name = "Exposure Index", .data_type = PDT_U32,
                         .read_only = false, .ivalue = 0, 
                         .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                        .num_enums = 11, .enums_data = &prop_exposure_index_values };
-const uint32_t prop_exposure_time_values[] = { 0x00002673, 0x000f4240, 0x00133991, 0x001836c9, 0x001e8480, 0x00267522, 0x00307192, 0x003d0900, 0x004ce644, 0x0060e324, 0x007a1200, 0x0099cc88, 0x00c1c648, 0x00f42400, 0x01339910, 0x01838c90, 0x01e84800, 0x02673221, 0x03071921, 0x03d09000, 0x03d0901e, 0x03d0903c, 0x03d0905a, 0x03d09078};
+                        .num_enums = 12, .enums_data = &prop_exposure_index_values };
+const uint32_t prop_exposure_time_values[] = { 0x0000007a, 0x00000099, 0x000000c1, 0x000000f4, 0x00000133, 0x00000183, 0x00000267, 0x00000307, 0x000003d0, 0x000004ce, 0x0000060e, 0x000007a1, 0x0000099c, 0x00000c1c, 0x00000f42, 0x00001339, 0x00001838, 0x00001e84, 0x00002673, 0x00003071, 0x00003d09, 0x00004ce6, 0x000060e3, 0x00007a12, 0x000099cc, 0x0000c1c6, 0x0000f424, 0x00013399, 0x0001838c, 0x0001e848, 0x00026732, 0x00030719, 0x0003d090, 0x0004ce64, 0x0007a120, 0x000f4240, 0x00133991, 0x001836c9, 0x001e8480, 0x00267522, 0x00307192, 0x003d0900, 0x004ce644, 0x0060e324, 0x007a1200, 0x0099cc88, 0x00c1c648, 0x00f42400, 0x01339910, 0x01838c90, 0x01e84800, 0x02673221, 0x03071921, 0x03d09000, 0x03d0901e, 0x03d0903c, 0x03d0905a, 0x03d09078};
 prop_t prop_exposure_time = { .id = 0x500d, .name = "Exposure Time", .data_type = PDT_U32,
                         .read_only = false, .ivalue = 0, 
                         .blob = { .count = 0, .data = 0, .reserved = 0 }, 
-                        .num_enums = 24, .enums_data = &prop_exposure_time_values };
+                        .num_enums = 58, .enums_data = &prop_exposure_time_values };
 
 
 const prop_t* props[] = {
