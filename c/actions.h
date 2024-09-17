@@ -41,7 +41,7 @@ void prop_arr_dump( prop_array_t* prar );
 typedef struct {
   op_code_t*    actions;
   conn_t*       conn;
-  int           max_time_per_step;
+  int           max_time_per_step;    // usecs. 1ms = 1000
 
   // Runtime
   int           ip;
