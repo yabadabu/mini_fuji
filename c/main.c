@@ -19,11 +19,12 @@ op_code_t actions_take[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
   { OC_READ_STORAGE_IDS  },
-  { OC_GET_PROP_ARRAY,   NULL,                  0 },
-  { OC_SET_PROP_ARRAY,   NULL,                  0 },
+  //{ OC_GET_PROP_ARRAY,   NULL,                  0 },
 //  { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
   { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
 //  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
+  { OC_SET_PROP_ARRAY,   NULL,                  0 },
+  { OC_GET_PROP_ARRAY,   NULL,                  0 },
 
   // This is required... even when we don't want autofocus
   { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_AutoFocus },
@@ -43,7 +44,9 @@ op_code_t actions_take[] = {
 op_code_t actions_set_config[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
+  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
   { OC_SET_PROP_ARRAY,   NULL,                  0 },
+  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
   { OC_END_OF_PROGRAM    }
 };
 
@@ -80,14 +83,15 @@ bool take_shot() {
   conn.trace_processed_packets = true;
 
   evaluation_t ev;
-  //eval_create( &ev, &conn, actions_take );
-  eval_create( &ev, &conn, actions_set_config );
+  eval_create( &ev, &conn, actions_take );
+  //eval_create( &ev, &conn, actions_set_config );
 
   prop_array_t parr;
   prop_arr_clear( &parr );
   //prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
-  prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_1600 );
-  prop_arr_set( &parr, PDV_Exposure_Time,  PDV_Exposure_Time_2_secs );
+  prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
+  // Camera needs to be in Time Mode
+  prop_arr_set( &parr, PDV_Exposure_Time,  PDV_Exposure_Time_5_secs );
   prop_arr_dump( &parr );
   //return false;
 
