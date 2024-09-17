@@ -57,6 +57,25 @@ const props = {
     ]
   },
 
+  "Batery Info" : {      // CurrentState in other sources
+    id : 'D36A',
+    dt : 'U32',
+    ranged : true,   // 24 bits
+    read_only : true,
+  },
+
+  "Batery Info Str" : {   
+    id : 'D36B',
+    dt : 'STRING',
+    read_only : true,
+  },
+
+  "Lens Name And Serial" : {   
+    id : 'D36D',
+    dt : 'STRING',
+    read_only : true,
+  },
+
   "Exposure Index" : {
     id : '500f',
     dt : 'U32',
@@ -77,6 +96,7 @@ const props = {
     ]
   },
 
+  // Requires the camera to be in Time -mode
   "Exposure Time" : {
     id : '500d',
     dt : 'U32',
@@ -190,8 +210,11 @@ Image Size(0x5003):(readwrite) (type=0xffff) Enumeration [
   '6000x4000',
   '6000x3376',
   '4000x4000'
-  ] value: '6000x4000'
+  ] value: '6000x4000'  -> 0a3600300030003000780034003000300030000000
   
+#define PTP_DPC_FUJI_LensNameAndSerial      0xD36D  -> 032c002c000000
+
+
 */
 
 }

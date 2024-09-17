@@ -41,6 +41,12 @@ extern prop_t prop_focus_mode;
 #define PDV_Focus_Mode_Single_Auto        0x8001
 #define PDV_Focus_Mode_Continuous_Auto    0x8002
 
+extern prop_t prop_batery_info;
+
+extern prop_t prop_batery_info_str;
+
+extern prop_t prop_lens_name_and_serial;
+
 extern prop_t prop_exposure_index;
 #define PDV_Exposure_Index  0x500f
 #define PDV_Exposure_Index_ISO_100        0x00000064

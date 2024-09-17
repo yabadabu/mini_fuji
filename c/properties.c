@@ -31,6 +31,9 @@ prop_t* prop_by_id( uint16_t prop_id ) {
     case 0xd212: return &prop_pending_events;
     case 0x5012: return &prop_pre_capture_delay;
     case 0x500a: return &prop_focus_mode;
+    case 0xD36A: return &prop_batery_info;
+    case 0xD36B: return &prop_batery_info_str;
+    case 0xD36D: return &prop_lens_name_and_serial;
     case 0x500f: return &prop_exposure_index;
     case 0x500d: return &prop_exposure_time;
     default: break;
@@ -209,6 +212,18 @@ prop_t prop_focus_mode = { .id = 0x500a, .name = "Focus Mode", .data_type = PDT_
                         .read_only = false, .ivalue = 0, 
                         .blob = { .count = 0, .data = 0, .reserved = 0 }, 
                         .num_enums = 3, .enums_data = &prop_focus_mode_values };
+prop_t prop_batery_info = { .id = 0xD36A, .name = "Batery Info", .data_type = PDT_U32,
+                        .read_only = true, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 0, .enums_data = 0 };
+prop_t prop_batery_info_str = { .id = 0xD36B, .name = "Batery Info Str", .data_type = PDT_STRING,
+                        .read_only = true, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 0, .enums_data = 0 };
+prop_t prop_lens_name_and_serial = { .id = 0xD36D, .name = "Lens Name And Serial", .data_type = PDT_STRING,
+                        .read_only = true, .ivalue = 0, 
+                        .blob = { .count = 0, .data = 0, .reserved = 0 }, 
+                        .num_enums = 0, .enums_data = 0 };
 const uint32_t prop_exposure_index_values[] = { 0x00000064, 0x000000c8, 0x00000320, 0x000003e8, 0x000004e2, 0x00000640, 0x000007D0, 0x00000c80, 0x00001900, 0x00003200, 0x00006400, 0xffffffff};
 prop_t prop_exposure_index = { .id = 0x500f, .name = "Exposure Index", .data_type = PDT_U32,
                         .read_only = false, .ivalue = 0, 
@@ -228,6 +243,9 @@ const prop_t* props[] = {
   &prop_pending_events,
   &prop_pre_capture_delay,
   &prop_focus_mode,
+  &prop_batery_info,
+  &prop_batery_info_str,
+  &prop_lens_name_and_serial,
   &prop_exposure_index,
   &prop_exposure_time,
   0L   // End of array

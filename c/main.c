@@ -79,8 +79,8 @@ bool take_shot() {
   conn_create( &conn );
   conn.on_event = (callback_event_t) { .context = NULL, .callback = &notify_event };
   conn.on_progress = (callback_progress_t){ .context = NULL, .callback = &download_progress, .enabled = false };
-  conn.trace_io = true;
-  conn.trace_processed_packets = true;
+  conn.trace_io = false;
+  conn.trace_processed_packets = false;
 
   evaluation_t ev;
   eval_create( &ev, &conn, actions_take );
