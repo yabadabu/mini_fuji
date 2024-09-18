@@ -19,17 +19,15 @@ op_code_t actions_take[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
   { OC_READ_STORAGE_IDS  },
-  //{ OC_GET_PROP_ARRAY,   NULL,                  0 },
-//  { OC_SET_PROP,         &prop_quality,         PDV_Quality_Fine },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
+  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_USB },
 //  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
-  { OC_SET_PROP_ARRAY,   NULL,                  0 },
-  { OC_GET_PROP_ARRAY,   NULL,                  0 },
+  { OC_SET_PROP_ARRAY,   },
+  { OC_GET_PROP_ARRAY,   },
 
   // This is required... even when we don't want autofocus
-  { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_AutoFocus },
+  { OC_SET_PROP,         PDV_Capture_Control, PDV_Capture_Control_AutoFocus },
   { OC_INITIATE_CAPTURE, },
-  { OC_SET_PROP,         &prop_capture_control, PDV_Capture_Control_Shoot },
+  { OC_SET_PROP,         PDV_Capture_Control, PDV_Capture_Control_Shoot },
   { OC_INITIATE_CAPTURE, },
 
   { OC_WAIT_SHOOT_ENDS,  },
@@ -37,16 +35,16 @@ op_code_t actions_take[] = {
   //{ OC_SAVE_IMAGES       },
   { OC_DELETE_IMAGES     },
   { OC_TERMINATE_CAPTURE },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
+  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_Camera },
   { OC_END_OF_PROGRAM    }
 };
 
 op_code_t actions_set_config[] = {
   { OP_DISCOVER_CAMERA   },
   { OP_CONNECT_TO_CAMERA },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_USB },
-  { OC_SET_PROP_ARRAY,   NULL,                  0 },
-  { OC_SET_PROP,         &prop_priority_mode,   PDV_Priority_Mode_Camera },
+  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_USB },
+  { OC_SET_PROP_ARRAY    },
+  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_Camera },
   { OC_END_OF_PROGRAM    }
 };
 
@@ -88,7 +86,7 @@ bool take_shot() {
 
   prop_array_t parr;
   prop_arr_clear( &parr );
-  //prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
+  prop_arr_set( &parr, PDV_Quality,        PDV_Quality_Fine );
   prop_arr_set( &parr, PDV_Exposure_Index, PDV_Exposure_Index_ISO_200 );
   // Camera needs to be in Time Mode
   prop_arr_set( &parr, PDV_Exposure_Time,  PDV_Exposure_Time_5_secs );

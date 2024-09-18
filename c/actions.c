@@ -242,10 +242,12 @@ bool eval_step( evaluation_t* ev ) {
     break;
 
   case OC_SET_PROP: {
-    prop_t* p = cmd->prop;
-    p->ivalue = cmd->ivalue;
-    printf( "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
-    ptpip_set_prop( c, p );
+    prop_t* p = prop_by_id( cmd->prop_id );
+    if( p ) {
+      p->ivalue = cmd->ivalue;
+      printf( "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
+      ptpip_set_prop( c, p );
+    }
     eval_next_ip( ev );
     break; }
 

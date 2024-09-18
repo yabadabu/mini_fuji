@@ -94,6 +94,14 @@ uint32_t blob_size( const blob_t *blob ) {
   return blob->count;
 }
 
+uint32_t blob_capacity( const blob_t *blob ) {
+  return blob->reserved;
+}
+
+void* blob_data( blob_t *blob ) {
+  return blob->data;
+}
+
 void blob_append_blob( blob_t* blob, const blob_t* other ) {
   blob_append_data( blob, other->data, other->count );
 }
@@ -210,6 +218,7 @@ bool blob_match( const blob_t* b1, const blob_t* b2 ) {
     return false;
   return memcmp( b1->data, b2->data, b1->count ) == 0;
 }
+
 
 /* 
 

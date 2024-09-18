@@ -20,10 +20,10 @@ typedef struct {
 static discovery_service_t ds;
 
 bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
-  blob->count = 0;
-  int bytes_read = ch_read( ch, blob->data, blob->reserved, usecs );
+  blob_clear( blob );
+  int bytes_read = ch_read( ch, blob_data(blob), blob_capacity( blob ), usecs );
   if( bytes_read > 0 ) {
-    blob->count = bytes_read;
+    blob_resize( blob, bytes_read );
     return true;
   }
   return false;
@@ -56,7 +56,7 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
   assert( out_camera );
 
   // Send a udp msg until we get a camera respondring
-  int brc = ch_broadcast( &ds.ch_udp, ds.discovery_msg.data, ds.discovery_msg.count );
+  int brc = ch_broadcast( &ds.ch_udp, blob_data( &ds.discovery_msg ), blob_size( &ds.discovery_msg ) );
 
   // The response is ... he tries to connect to the ip we sent and sends his ip
   channel_t ch_client;
@@ -64,7 +64,6 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
   int ms_to_usecs = 1000;
 
   if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_msecs * ms_to_usecs ) ) {
-    assert( ds.buff.reserved > 0 );
 
     while( !ch_read_blob( &ch_client, &ds.buff, 0 ) )
       ch_wait( ms_to_usecs );
@@ -83,7 +82,7 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
     memset( out_camera, 0x00, sizeof( camera_info_t ));
 
     // Parse the results
-    char* q0 = (char*) ds.buff.data;
+    char* q0 = (char*) blob_data( &ds.buff );
     uint32_t msg_size = blob_size( &ds.buff );
     char* q = q0;
     while( q && ( q - q0 < msg_size ) ) {

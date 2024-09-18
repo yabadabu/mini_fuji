@@ -118,7 +118,7 @@ void conn_send( conn_t* conn, const blob_t* blob ) {
     printf( "Send " );
     blob_dump( blob );
   }
-  ch_write( &conn->channel, blob->data, blob_size( blob ) );
+  ch_write( &conn->channel, blob_data( (blob_t*) blob ), blob_size( blob ) );
 }
 
 bool conn_has_packet_ready( conn_t* conn, uint32_t* packet_size ) {
@@ -140,7 +140,7 @@ bool conn_is_waiting_answer( conn_t* conn ) {
   return conn->curr_cmd != NULL;
 }
 
-void conn_dispatch( conn_t* conn, const blob_t* msg ) {
+void conn_dispatch( conn_t* conn, blob_t* msg ) {
 
   if( !conn->curr_cmd ) {
     printf( "Not cmd waiting for camera answer! Packed not processed\n" );
@@ -155,9 +155,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   // Send the extra bytes to the current cmd to parse
   // Sometimes there is data as part of the msg_type_end msg type
   blob_t args;
-  args.data = msg->data + offset_payload;
-  args.count = packet_size - offset_payload;
-  args.reserved = 0;
+  blob_view( &args, msg, offset_payload, packet_size - offset_payload );
 
   if( conn->trace_processed_packets ) {
     printf( "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
@@ -168,7 +166,7 @@ void conn_dispatch( conn_t* conn, const blob_t* msg ) {
   assert( msg_type == msg_type_data || msg_type == msg_type_end || msg_type == msg_type_init );
 
   // Let the current cmd parse the incomming data
-  if( args.count > 0 && conn->curr_cmd->parse )
+  if( blob_size( &args ) > 0 && conn->curr_cmd->parse )
     conn->curr_cmd->parse( &args, conn->curr_output );
 
   // The command is over?

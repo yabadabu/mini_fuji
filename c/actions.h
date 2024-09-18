@@ -19,7 +19,7 @@ enum eOpCode {
 
 typedef struct {
   enum eOpCode op_code;
-  prop_t*      prop;
+  uint32_t     prop_id;
   uint32_t     ivalue;
 } op_code_t;
 

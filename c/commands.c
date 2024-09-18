@@ -112,7 +112,7 @@ int store_contents_in_blob( const blob_t* args, void* output ) {
   //printf( "Adding %d bytes to existing blob of %d/%d\n", args->count, b->count, b->reserved );
   // if( args->count < 32 )
   //   blob_dump( args );
-  blob_append_data( b, args->data, blob_size(args) );
+  blob_append_blob( b, args);
   return 0; 
 }
 
@@ -136,7 +136,7 @@ int parse_partial_obj( const blob_t* args, void* output ) {
   // The camera is sending an extra 4 bytes with the offset where the block is recv
   uint32_t sz = blob_size( args );
   if( sz >= 4 )
-    blob_append_data( b, args->data, sz - 4 );
+    blob_append_data( b, blob_data((blob_t*)args), sz - 4 );
   return 0; 
 }
 
