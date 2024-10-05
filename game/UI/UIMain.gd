@@ -1,6 +1,6 @@
 extends Control
 
-@onready var fuji := $GDFujiController
+@onready var fuji : GDFujiController = $GDFujiController
 
 func _ready():
 	fuji.camera_event.connect( addLog )

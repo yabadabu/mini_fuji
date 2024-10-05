@@ -17,8 +17,11 @@ env['IPHONEMINVERSION'] = '18.0'
 # - LINKFLAGS are for linking flags
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
-env.Append(CPPPATH=["plugins/"])
-all_sources = Glob("plugins/*.cpp") + Glob("plugins/quirc/*.c")
+env.Append(CPPPATH=["plugins/", "c/"])
+
+fuji_sources = [ f"c/{f}.c" for f in [ "connection", "actions", "discovery", "properties", "blob", "channel", "commands" ] ]
+
+all_sources = Glob("plugins/*.cpp") + fuji_sources
 ios_sources = Glob("plugins/*.iOS.mm")
 apple_sources = Glob("plugins/*.Apple.mm")
 windows_sources = Glob("plugins/*.Windows.cpp")

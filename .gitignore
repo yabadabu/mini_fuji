@@ -135,3 +135,5 @@ x64
 godot-cpp/
 node/
 *.dblite
+*.os
+game/bin/libfuji.*

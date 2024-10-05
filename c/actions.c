@@ -73,7 +73,7 @@ bool prop_arr_get( prop_array_t* prar, uint32_t prop_id, uint32_t* out_ivalue ) 
   return true;
 }
 
-void eval_create( evaluation_t* ev, conn_t* c, op_code_t* actions ) {
+void eval_create( evaluation_t* ev, conn_t* c, const op_code_t* actions ) {
   ev->actions = actions;
   ev->ip = 0;
   ev->steps_in_ip = 0;
@@ -115,7 +115,7 @@ bool eval_step( evaluation_t* ev ) {
       return false;
   }
 
-  op_code_t* cmd = ev->actions + ev->ip;
+  const op_code_t* cmd = ev->actions + ev->ip;
   int sub_step = ev->steps_in_ip;
 
   //printf( "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );

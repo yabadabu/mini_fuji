@@ -1,5 +1,7 @@
 #pragma once
 
+#include "discovery.h"
+
 enum eOpCode {
   OC_INVALID = 0,
   OP_DISCOVER_CAMERA,
@@ -39,9 +41,9 @@ void prop_arr_dump( prop_array_t* prar );
 
 // ------------------------------------------------------
 typedef struct {
-  op_code_t*    actions;
-  conn_t*       conn;
-  int           max_time_per_step;    // usecs. 1ms = 1000
+  const op_code_t* actions;
+  conn_t*          conn;
+  int              max_time_per_step;    // usecs. 1ms = 1000
 
   // Runtime
   int           ip;
@@ -57,5 +59,5 @@ typedef struct {
 
 } evaluation_t;
 
-void eval_create( evaluation_t* ev, conn_t* c, op_code_t* actions );
+void eval_create( evaluation_t* ev, conn_t* c, const op_code_t* actions );
 bool eval_step( evaluation_t* ev );

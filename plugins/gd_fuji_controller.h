@@ -3,6 +3,11 @@
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/core/binder_common.hpp>
 
+extern "C" {
+  #include "connection.h"
+  #include "actions.h"
+}
+
 namespace godot {
 
 // -------------------------------------------------
@@ -12,14 +17,22 @@ class GDFujiController : public Node {
 protected:
   static void _bind_methods();
 
-  bool active = false;
+  bool  is_valid = false;
+  bool  active = false;
   float acc_time = 0.0f;
+  
+  conn_t       conn;
+  evaluation_t ev;
 
 public:
+  GDFujiController();
+  ~GDFujiController();
+
   bool start();
   void stop();
   void toggle();
   void _process(double delta) override;
+  void onEvent( const char* msg );
 
 };
 
