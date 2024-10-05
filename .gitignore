@@ -131,3 +131,7 @@ dist
 
 x64
 .vs
+
+godot-cpp/
+node/
+*.dblite

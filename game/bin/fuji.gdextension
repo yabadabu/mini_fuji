@@ -1,0 +1,18 @@
+[configuration]
+
+entry_symbol = "library_init"
+compatibility_minimum = "4.2"
+
+[libraries]
+
+windows.x86_64.debug = "res://bin/libfuji.windows.template_debug.x86_64.dll"
+windows.x86_64.release = "res://bin/libfuji.windows.template_release.x86_64.dll"
+macos.debug = "res://bin/libfuji.macos.template_debug.framework"
+macos.release = "res://bin/libfuji.macos.template_release.framework"
+ios.debug = "res://bin/libfuji.ios.template_debug.universal.dylib"
+ios.release = "res://bin/libfuji.ios.release.universal.dylib"
+android.arm64.debug = "res://bin/libfuji.android.template_debug.arm64.so"
+android.arm64.release = "res://bin/libfuji.android.template_release.arm64.so"
+android.arm32.debug = "res://bin/libfuji.android.template_debug.arm32.so"
+android.arm32.release = "res://bin/libfuji.android.template_release.arm32.so"
+
