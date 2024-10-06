@@ -11,6 +11,7 @@ config_version=5
 [application]
 
 config/name="camera_app"
+run/main_scene="res://UI/UIMain.tscn"
 config/features=PackedStringArray("4.2", "Mobile")
 config/icon="res://icon.svg"
 
@@ -21,6 +22,10 @@ window/size/viewport_height=1152
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
+
+[filesystem]
+
+import/blender/enabled=false
 
 [gui]
 
@@ -33,3 +38,4 @@ pointing/emulate_touch_from_mouse=true
 [rendering]
 
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

@@ -137,3 +137,6 @@ node/
 *.dblite
 *.os
 game/bin/libfuji.*
+
+builds
+builds_release
