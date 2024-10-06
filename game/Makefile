@@ -30,6 +30,9 @@ help:
 # scons platform=ios target=template_release
 # vtool -show game.app/Frameworks/libexpedition.ios.release.universal.framework/libexpedition.ios.release.universal
 # ios-deploy -b ~/Archives/2024-07-04/game\ 4-7-24,\ 01.32.xcarchive/Products/Applications/game.app
+# To confirm the debug symbols are there
+# nm -a .os
+# nm -a bin/libfuji.ios.template_debug.universal.dylib   
 
 # apk/aab in debug
 apk:
