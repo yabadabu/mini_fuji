@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "connection.h"
+#include "dbg.h"
 
 // ------------------------------------------------------
 extern cmd_t cmd_open_session;
@@ -98,7 +99,7 @@ int  conn_get_last_ptpip_return_code( conn_t* conn ) {
 
 void conn_recv( conn_t* conn, const blob_t* new_data ) {
   if( conn->trace_io ) {
-    printf( "Recv " );
+    dbg( DbgTrace, "Recv " );
     blob_dump( new_data );
   }
   blob_append_blob( &conn->recv_data, new_data );
@@ -115,7 +116,7 @@ void conn_recv( conn_t* conn, const blob_t* new_data ) {
 
 void conn_send( conn_t* conn, const blob_t* blob ) {
   if( conn->trace_io ) {
-    printf( "Send " );
+    dbg( DbgTrace, "Send " );
     blob_dump( blob );
   }
   ch_write( &conn->channel, blob_data( (blob_t*) blob ), blob_size( blob ) );
@@ -143,7 +144,7 @@ bool conn_is_waiting_answer( conn_t* conn ) {
 void conn_dispatch( conn_t* conn, blob_t* msg ) {
 
   if( !conn->curr_cmd ) {
-    printf( "Not cmd waiting for camera answer! Packed not processed\n" );
+    dbg( DbgWarn, "Not cmd waiting for camera answer! Packed not processed\n" );
     return;
   }
 
@@ -158,7 +159,7 @@ void conn_dispatch( conn_t* conn, blob_t* msg ) {
   blob_view( &args, msg, offset_payload, packet_size - offset_payload );
 
   if( conn->trace_processed_packets ) {
-    printf( "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
+    dbg( DbgInfo, "Packet %5d bytes %04x %04x %08x : %s ", packet_size, msg_type, cmd_id, seq_id, conn->curr_cmd ? conn->curr_cmd->name : "None");
     blob_dump( &args );
   }
 
@@ -181,7 +182,7 @@ void conn_dispatch( conn_t* conn, blob_t* msg ) {
   else if( msg_type == msg_type_init ) {
     if( cmd_id == cmd_initialize_comm.id ) {    // 0x0000
       if( seq_id == 0x00002019 ) {              // Device Busy
-        printf( "Resending initializtion packet\n");
+        dbg( DbgInfo, "Resending initializtion packet\n");
         conn_clear_state( conn );
         ptpip_initialize( conn );
       }
@@ -314,7 +315,7 @@ int ptpip_set_prop( conn_t* conn, prop_t* prop ) {
     blob_write_u32le( msg, offset_payload, prop->ivalue );
     
   } else {
-    printf( "prop.data_type %d not yet supported (prop name : %s)\n", prop->data_type, prop->name );
+    dbg( DbgError, "prop.data_type %d not yet supported (prop name : %s)\n", prop->data_type, prop->name );
     assert( false );
   }
 

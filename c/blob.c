@@ -1,7 +1,8 @@
 #include <stdlib.h>     // malloc
 #include <string.h>     // memcpy
-#include <stdio.h>      // printf
+#include <stdio.h>      // FILE
 #include <assert.h>
+#include "dbg.h"
 #include "blob.h"
 
 void blob_create( blob_t* blob, uint32_t num_bytes, uint32_t bytes_to_reserve ) {
@@ -58,7 +59,7 @@ void blob_from_hex_string( blob_t* blob, uint32_t offset, const char* hex_str ) 
     ++num_chars;
   }
   if( offset > blob->count ) {
-    printf( "setting new count to %d\n", offset );
+    dbg( DbgInfo, "setting new count to %d\n", offset );
     blob->count = offset;
   }
   assert( blob_is_valid( blob ) );
@@ -170,16 +171,16 @@ bool blob_is_valid( const blob_t* blob ) {
 }
 
 void blob_dump( const blob_t* blob ) {
-  printf( "%4d / %4d : ", blob->count, blob->reserved );
+  dbg( DbgTrace, "%4d / %4d : ", blob->count, blob->reserved );
   uint32_t max_i = blob->count > 512 ? 512 : blob->count;
   for( uint32_t i=0; i<max_i; ++i ) {
     // if( i > 0 && ( i % 32 ) == 0 )
     //   printf( "\n                ");
-    printf( "%02x ", blob->data[i] );
+    dbg( DbgTrace, "%02x ", blob->data[i] );
   } 
   if( max_i != blob->count )
-    printf( "...");
-  printf( "\n");
+    dbg( DbgTrace, "...");
+  dbg( DbgTrace, "\n");
 }
 
 bool blob_save( const blob_t* blob, const char* ofilename ) {

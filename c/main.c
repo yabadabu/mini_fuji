@@ -7,6 +7,7 @@
 #include "discovery.h" 
 #include "actions.h" 
 #include "actions_list.h" 
+#include "dbg.h" 
 
 // ---------------------------------
 static void show_waiting_answer() {
@@ -31,7 +32,13 @@ static void download_progress( void* context, uint32_t curr, uint32_t required )
   fflush( stdout );
 }
 
+static void my_output_fn( void* context, enum eDbgLevel level, const char* msg ) {
+  printf( "%d: %s", level, msg );
+}
+
 bool take_shot() {
+
+  setDbgCallback( NULL, DbgTrace, &my_output_fn );
   
   conn_t       conn;
   conn_create( &conn );
@@ -55,7 +62,7 @@ bool take_shot() {
 
   ev.custom_props = &parr;
 
-  printf( "eval_step starts\n" );
+  dbg( DbgInfo, "eval_step starts\n" );
   while( !eval_step( &ev )) {
     show_waiting_answer();
   }

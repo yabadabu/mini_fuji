@@ -5,6 +5,7 @@
 #include "discovery.h"
 #include "properties.h"
 #include "actions.h"
+#include "dbg.h"
 
 // ------------------------------------------------------
 int prop_arr_find_idx( prop_array_t* prar, uint32_t prop_id ) {
@@ -22,7 +23,7 @@ void prop_arr_clear( prop_array_t* prar ) {
 }
 
 void prop_arr_dump( prop_array_t* prar ) {
-  printf( "Property Array contains %d properties/values\n", prar->count );
+  dbg( DbgInfo, "Property Array contains %d properties/values\n", prar->count );
   for( int i=0; i<prar->count; ++i ) {
     uint32_t prop_id = prar->ids[ i ];
     uint32_t ivalue = prar->ivalues[ i ];
@@ -33,7 +34,7 @@ void prop_arr_dump( prop_array_t* prar ) {
     prop_t* p = prop_by_id( prop_id );
     assert( p );
     p->ivalue = ivalue;
-    printf( "  [%d] 0x%04x:%32s => %08x (%s)\n", i, p->id, p->name, p->ivalue, prop_get_value_str( p ) ); 
+    dbg( DbgInfo, "  [%d] 0x%04x:%32s => %08x (%s)\n", i, p->id, p->name, p->ivalue, prop_get_value_str( p ) ); 
   }
 }
 
@@ -99,7 +100,7 @@ static void eval_next_substep( evaluation_t* ev ) {
 }
 
 bool eval_error( evaluation_t* ev, const char* msg ) {
-  printf( "Error: %s\n", msg );
+  dbg( DbgError, "EvalError: %s\n", msg );
   return true;
 }
 
@@ -124,13 +125,13 @@ bool eval_step( evaluation_t* ev ) {
   case OP_DISCOVER_CAMERA:
 
     if( sub_step == 0 ) {
-      printf( "OP_DISCOVER_CAMERA. Start\n");
+      dbg( DbgInfo, "OP_DISCOVER_CAMERA. Start\n");
       network_interface_t ni[4];
       int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
       const char* local_ip = NULL;
       for( int i=0; i<num_interfaces; ++i ) {
         if( strcmp( ni[i].ip, "127.0.0.1" ) != 0 ) {
-          printf( "%16s : %s\n", ni[i].ip, ni[i].name );
+          dbg( DbgInfo, "%16s : %s\n", ni[i].ip, ni[i].name );
           if( !local_ip )
             local_ip = ni[i].ip;
         }
@@ -142,13 +143,13 @@ bool eval_step( evaluation_t* ev ) {
       eval_next_substep( ev );
 
     } else if( sub_step == 1 ) {
-      printf( "OP_DISCOVER_CAMERA. Waiting for camera\n");
+      dbg( DbgInfo, "OP_DISCOVER_CAMERA. Waiting for camera\n");
 
       if( discovery_update( &ev->camera_info, ev->max_time_per_step ) )
         eval_next_substep( ev );
 
     } else if( sub_step == 2 ) {
-      printf( "OP_DISCOVER_CAMERA. Camera found\n");
+      dbg( DbgInfo, "OP_DISCOVER_CAMERA. Camera found\n");
       discovery_stop();    
       eval_next_ip( ev );
     }
@@ -159,23 +160,23 @@ bool eval_step( evaluation_t* ev ) {
     if( sub_step == 0 ) {
       char conn_str[128] = {"tcp:"};
       strcat(conn_str, ev->camera_info.ip);
-      printf( "OP_CONNECT_TO_CAMERA. Connect to camera at %s:%d\n", conn_str, ev->camera_info.port );
+      dbg( DbgInfo, "OP_CONNECT_TO_CAMERA. Connect to camera at %s:%d\n", conn_str, ev->camera_info.port );
       if( !ch_create( &c->channel, conn_str, ev->camera_info.port) )
         return eval_error( ev, "Failed to identify camera info");
       eval_next_substep( ev );
 
     } else if( sub_step == 1 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Initialize\n" );
+      dbg( DbgInfo, "OP_CONNECT_TO_CAMERA. Initialize\n" );
       ptpip_initialize( c );
       eval_next_substep( ev );
 
     } else if( sub_step == 2 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Close session\n" );
+      dbg( DbgInfo, "OP_CONNECT_TO_CAMERA. Close session\n" );
       ptpip_close_session( c );
       eval_next_substep( ev );
 
     } else if( sub_step == 3 ) {
-      printf( "OP_CONNECT_TO_CAMERA. Open session\n" );
+      dbg( DbgInfo, "OP_CONNECT_TO_CAMERA. Open session\n" );
       ptpip_open_session( c );
       eval_next_ip( ev );
 
@@ -189,7 +190,7 @@ bool eval_step( evaluation_t* ev ) {
     } else if( ev->storage_ids.count > 0 ) {
       eval_next_ip( ev );
     } else {
-      printf( "No storage founds!!\n");
+      dbg( DbgInfo, "No storage founds!!\n");
       return true;
     }
     break;
@@ -203,13 +204,13 @@ bool eval_step( evaluation_t* ev ) {
           ptpip_get_prop( c, prop );
           eval_next_substep( ev );
         } else {
-          printf( "GET_PROP_ARRAY[%d] %04x:%s => %08x (%s) (RC:%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) )); 
+          dbg( DbgInfo, "GET_PROP_ARRAY[%d] %04x:%s => %08x (%s) (RC:%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop ), ptpip_error_msg( conn_get_last_ptpip_return_code( c ) )); 
           prop_arr_set( ev->custom_props, prop_id, prop->ivalue );
           eval_next_iteration( ev );
         }
       } else {
         // If the prop is not registered report and try the next one
-        printf( "GET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
+        dbg( DbgInfo, "GET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
         eval_next_iteration( ev );
       }
     } else {
@@ -224,16 +225,16 @@ bool eval_step( evaluation_t* ev ) {
       if( prop ) {
         if( !prop->read_only ) {
           if( prop_arr_get( ev->custom_props, prop_id, &prop->ivalue ) ) {
-            printf( "SET_PROP_ARRAY[%d] %04x:%s => %08x (%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
+            dbg( DbgInfo, "SET_PROP_ARRAY[%d] %04x:%s => %08x (%s)\n", ev->iteration, prop->id, prop->name, prop->ivalue, prop_get_value_str( prop )); 
             ptpip_set_prop( c, prop );
           } else {
-            printf( "SET_PROP_ARRAY[%d].Property %04x is read-only\n", ev->iteration, prop_id );
+            dbg( DbgInfo, "SET_PROP_ARRAY[%d].Property %04x is read-only\n", ev->iteration, prop_id );
           }
         } else {
-          printf( "SET_PROP_ARRAY.Property %04x is read-only\n", prop_id );
+          dbg( DbgInfo, "SET_PROP_ARRAY.Property %04x is read-only\n", prop_id );
         }
       } else {
-        printf( "SET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
+        dbg( DbgInfo, "SET_PROP_ARRAY.Property %04x is not registered\n", prop_id );
       }
       eval_next_iteration( ev );
     } else {
@@ -245,27 +246,27 @@ bool eval_step( evaluation_t* ev ) {
     prop_t* p = prop_by_id( cmd->prop_id );
     if( p ) {
       p->ivalue = cmd->ivalue;
-      printf( "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
+      dbg( DbgInfo, "Setting prop %04x:%s to %08x:%s\n", p->id, p->name, p->ivalue, prop_get_value_str( p ) );
       ptpip_set_prop( c, p );
     }
     eval_next_ip( ev );
     break; }
 
   case OC_INITIATE_CAPTURE:
-    printf( "Initiate Capture\n" );
+    dbg( DbgInfo, "Initiate Capture\n" );
     ptpip_initiate_capture( c );
     eval_next_ip( ev );
     break;
 
   case OC_TERMINATE_CAPTURE:
-    printf( "Terminate Capture\n" );
+    dbg( DbgInfo, "Terminate Capture\n" );
     ptpip_terminate_capture( c );
     eval_next_ip( ev );
     break;
 
   case OC_WAIT_SHOOT_ENDS: {
     if( sub_step == 0 )
-      printf( "Checking if shoot ends\n" );
+      dbg( DbgInfo, "Checking if shoot ends\n" );
 
     if( ( ev->steps_in_ip & 1 ) == 0 ) {
       prop_pending_events.ivalue = 0;
@@ -281,13 +282,13 @@ bool eval_step( evaluation_t* ev ) {
     break; }
 
   case OC_READ_OBJ_HANDLES:
-    printf( "Reading obj handles\n" );
+    dbg( DbgInfo, "Reading obj handles\n" );
     ptpip_get_obj_handles( c, ev->storage_ids.ids[0], &ev->handles );
     eval_next_ip( ev );
     break;
 
   case OC_SAVE_IMAGES:
-    printf( "Downloading obj %d / %d [%d.%d]\n", ev->iteration, ev->handles.count, ev->iteration, sub_step );
+    dbg( DbgInfo, "Downloading obj %d / %d [%d.%d]\n", ev->iteration, ev->handles.count, ev->iteration, sub_step );
     if( ev->iteration < ev->handles.count ) {
       handle_t h = ev->handles.handles[ ev->iteration ];
       if( ev->steps_in_ip == 0 ) {
@@ -299,7 +300,7 @@ bool eval_step( evaluation_t* ev ) {
         c->on_progress.enabled = false;
         char ofilename[256];
         sprintf( ofilename, "img_%04d.jpg", ev->iteration );
-        printf( "Saving %d bytes to %s\n", blob_size( &ev->download_buffer ), ofilename );
+        dbg( DbgInfo, "Saving %d bytes to %s\n", blob_size( &ev->download_buffer ), ofilename );
         blob_save( &ev->download_buffer, ofilename );
         eval_next_iteration( ev );
       }
@@ -310,7 +311,7 @@ bool eval_step( evaluation_t* ev ) {
     break;
 
   case OC_DELETE_IMAGES:
-    printf( "Deleting obj %d / %d\n", ev->iteration, ev->handles.count );
+    dbg( DbgInfo, "Deleting obj %d / %d\n", ev->iteration, ev->handles.count );
     if( ev->iteration < ev->handles.count ) {
       handle_t h = ev->handles.handles[ ev->iteration ];
       ptpip_del_obj( c, h );
@@ -323,11 +324,11 @@ bool eval_step( evaluation_t* ev ) {
     break;
 
   case OC_END_OF_PROGRAM:
-    printf( "End of program\n" );
+    dbg( DbgInfo, "End of program\n" );
     return true;
 
   default:
-    printf( "Unsupported op code %04x", cmd->op_code );
+    dbg( DbgError, "Unsupported op code %04x", cmd->op_code );
     return true;
 
   }

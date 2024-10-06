@@ -16,7 +16,7 @@ void setDbgCallback( void* new_context, enum eDbgLevel new_level, callback_dbg_f
   callback_dbg.callback = new_callback;
 }
 
-void dbg(enum eLogLevel level, const char* fmt, ...) {
+void dbg(enum eDbgLevel level, const char* fmt, ...) {
   if (!callback_dbg.callback || callback_dbg.level < level)
     return;
   char buf[2048];

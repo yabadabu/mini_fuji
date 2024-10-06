@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>      // printf
+#include <stdio.h>      // perror
 #include <stdlib.h>
 
 // --------------------------------------------------------------------
