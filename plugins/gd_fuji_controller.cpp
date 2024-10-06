@@ -48,7 +48,7 @@ static void on_dbg_msg( void* context, enum eDbgLevel level, const char* msg ) {
 
   // For the console
   int nchars = strlen( msg );
-  if( nchars > 0 && msg[ nchars - 1 ] )
+  if( nchars > 0 && msg[ nchars - 1 ] == '\n')
     ((char*) msg)[ nchars - 1 ] = 0x00;
   UtilityFunctions::print( msg );
 }
@@ -94,13 +94,6 @@ void GDFujiController::_process(double delta) {
   if( eval_step( &ev ) ) {
     UtilityFunctions::print( "eval_step complete" );
     active = false;
-    return;
   }
 
-  acc_time += delta;
-  if( acc_time > 1.0f ) {
-    UtilityFunctions::print( "GDFujiController::camera_event" );
-    acc_time -= 1.0f;
-    emit_signal( "camera_event", "Camera says hi" );
-  }
 }
