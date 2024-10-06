@@ -119,15 +119,15 @@ bool eval_step( evaluation_t* ev ) {
   const op_code_t* cmd = ev->actions + ev->ip;
   int sub_step = ev->steps_in_ip;
 
-  //printf( "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );
+  dbg( DbgTrace, "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );
   switch( cmd->op_code ) {
 
   case OP_DISCOVER_CAMERA:
 
     if( sub_step == 0 ) {
       dbg( DbgInfo, "OP_DISCOVER_CAMERA. Start\n");
-      network_interface_t ni[4];
-      int num_interfaces = ch_get_local_network_interfaces( ni, 4 );
+      network_interface_t ni[16];
+      int num_interfaces = ch_get_local_network_interfaces( ni, 16 );
       const char* local_ip = NULL;
       for( int i=0; i<num_interfaces; ++i ) {
         if( strcmp( ni[i].ip, "127.0.0.1" ) != 0 ) {

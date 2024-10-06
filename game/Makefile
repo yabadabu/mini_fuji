@@ -83,7 +83,7 @@ inc_apk_build_number:
 	@echo ✅ Increased Android build number
 
 plugin_ios:
-	cd .. && scons platform=ios ios_min_version=18.0
+	cd .. && scons platform=ios ios_min_version=18.0 debug_symbols=yes strip=no
 #	cd .. && scons platform=android
 
 plugin_ios_release:

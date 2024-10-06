@@ -440,6 +440,10 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
       while (pUnicast != NULL) {
         SOCKADDR* sa = pUnicast->Address.lpSockaddr;
         if (sa->sa_family == AF_INET) {
+
+          if( num_interfaces >= max_interfaces )
+            break;
+          
           char str[INET_ADDRSTRLEN];
           inet_ntop(AF_INET, &(((struct sockaddr_in*)sa)->sin_addr), str, INET_ADDRSTRLEN);
           make_network_interface_t( out_interfaces + num_interfaces, str, description );
@@ -464,6 +468,9 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
 
     if (ifa->ifa_addr == NULL) 
       continue;
+
+    if( num_interfaces >= max_interfaces )
+      break;
 
     if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
       if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
