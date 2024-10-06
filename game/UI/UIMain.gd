@@ -1,9 +1,12 @@
 extends Control
 
 @onready var fuji : GDFujiController = $GDFujiController
+var frame_counter = 0;
 
 func _ready():
 	fuji.camera_event.connect( addLog )
+	fuji.camera_log.connect( addLog )
+	fuji.set_max_time_per_step( 1000 * 1000 );
 
 func addLog( new_text : String ):
 	var line : Label = Label.new()
@@ -17,3 +20,7 @@ func _on_clear_button_pressed():
 func _on_start_button_pressed():
 	fuji.toggle()
 	addLog( "New line added %d" % [%LogLines.get_child_count()])
+
+func _process( _delta ):
+	frame_counter += 1
+	%StatusLabel.text = "frame: %d" % [frame_counter]

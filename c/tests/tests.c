@@ -397,7 +397,7 @@ bool take_shot() {
 
   if( !discovery_start( local_ip ) )
     return false;
-  while( !discovery_update( &camera_info, 5 * 1000 ) )
+  while( !discovery_update( &camera_info, 5 * 1000 * 1000 ) )
     printf( "Searching camera at %s...\n", local_ip);
   discovery_stop();
 

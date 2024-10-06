@@ -32,8 +32,7 @@ public:
   void stop();
   void toggle();
   void _process(double delta) override;
-  void onEvent( const char* msg );
-
+  void set_max_time_per_step( int new_max_time_per_step_usecs );
 };
 
 }

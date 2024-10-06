@@ -44,6 +44,11 @@ layout_mode = 2
 text = "This is line 2
 "
 
+[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Status:"
+
 [node name="ClearButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4

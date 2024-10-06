@@ -49,6 +49,7 @@ bool take_shot() {
 
   evaluation_t ev;
   eval_create( &ev, &conn, actions_take );
+  ev.max_time_per_step = 1000 * 1000;
   //eval_create( &ev, &conn, actions_set_config );
 
   prop_array_t parr;

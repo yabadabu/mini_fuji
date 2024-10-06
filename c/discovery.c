@@ -52,7 +52,7 @@ bool discovery_start( const char* local_ip ) {
   return true;
 }
 
-bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
+bool discovery_update( camera_info_t* out_camera, int accept_time_usecs ) {
   assert( out_camera );
 
   // Send a udp msg until we get a camera respondring
@@ -61,9 +61,9 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_msecs ) {
   // The response is ... he tries to connect to the ip we sent and sends his ip
   channel_t ch_client;
 
-  int ms_to_usecs = 1000;
+  const int ms_to_usecs = 1000;
 
-  if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_msecs * ms_to_usecs ) ) {
+  if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_usecs ) ) {
 
     while( !ch_read_blob( &ch_client, &ds.buff, 0 ) )
       ch_wait( ms_to_usecs );
