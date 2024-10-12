@@ -119,12 +119,25 @@ static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port 
   return true;
 }
 
-int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
+int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size, const char* broadcast_addr ) {
   assert( ch->is_udp );
-  dbg( DbgInfo, "ch_broadcast on fd %d\n", ch->fd ); 
+
+  if( !ch->is_broadcast ) {
+
+    if( !set_udp_broadcast( ch->fd ) ) {
+      sys_close(ch->fd);
+      return false;
+    }
+    //if( is_broadcast )
+    dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
+    ch->is_broadcast = true;
+  }
 
   struct sockaddr_in addr;
-  if( !ch_make_address( &addr, broadcast_ip, ch->port ) )
+  if( !broadcast_addr )
+    broadcast_addr = broadcast_ip;
+  dbg( DbgInfo, "ch_broadcast on fd %d to %s\n", ch->fd, broadcast_addr ); 
+  if( !ch_make_address( &addr, broadcast_addr, ch->port ) )
     return -1;
 
   // Do the actual broadcast
@@ -195,29 +208,6 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       return false;
     }
     dbg( DbgInfo, "UDP create fd => %d\n", sockfd);
-
-    // Enable the broadcast option
-    bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
-    if( is_broadcast && !set_udp_broadcast( sockfd ) ) {
-      dbg( DbgError, "udp set_udp_broadcast failed %d\n", sys_error_code);
-      sys_close(sockfd);
-      return false;
-    }
-    //if( is_broadcast )
-    dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
-
-    // struct sockaddr_in local_addr;
-    // memset(&local_addr, 0, sizeof(local_addr));
-    // local_addr.sin_family = AF_INET;
-    // local_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // Bind to any local address
-    // local_addr.sin_port = htons(port);  // Let OS choose the port
-    // if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
-    //   perror("bind");
-    //   sys_close(sockfd);
-    //   return false;
-    // }
-    // dbg( DbgInfo, "UDP Bind OK\n");
-
   }
   else if( strncmp( conn_info, "tcp_server:", 11 ) == 0 ) {
     ch->is_server = true;
@@ -437,10 +427,11 @@ bool ch_accept( channel_t* server, channel_t* out_new_client, int usecs ) {
   return true;
 }
 
-void make_network_interface_t( network_interface_t* out_ni, const char* ip, const char* name ) {
+void make_network_interface_t( network_interface_t* out_ni, const char* ip, const char* name, const char* broadcast ) {
   memset( out_ni, 0x00, sizeof( network_interface_t ) );
   strncpy( out_ni->ip, ip, sizeof( out_ni->ip ) - 1 );
   strncpy( out_ni->name, name, sizeof( out_ni->name ) - 1 );
+  strncpy( out_ni->broadcast, broadcast, sizeof( out_ni->broadcast ) - 1 );
 }
 
 int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint32_t max_interfaces ) {
@@ -475,7 +466,7 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
           
           char str[INET_ADDRSTRLEN];
           inet_ntop(AF_INET, &(((struct sockaddr_in*)sa)->sin_addr), str, INET_ADDRSTRLEN);
-          make_network_interface_t( out_interfaces + num_interfaces, str, description );
+          make_network_interface_t( out_interfaces + num_interfaces, str, description,  );
           ++num_interfaces;
         }
         pUnicast = pUnicast->Next;
@@ -502,18 +493,30 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
       break;
 
     if (ifa->ifa_addr->sa_family == AF_INET) { // IPv4
-      if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
-        make_network_interface_t( out_interfaces + num_interfaces, host, ifa->ifa_name );
-        ++num_interfaces;
-      }
+      if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST))
+        continue;
+
+      if( !ifa->ifa_netmask )
+        continue;
 
       char mask[NI_MAXHOST];
-      if( ifa->ifa_netmask ) {
-        if (getnameinfo(ifa->ifa_netmask, sizeof(struct sockaddr_in), mask, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
-          dbg( DbgInfo, "Host is %s\n", host );
-          dbg( DbgInfo, "Mask is %s\n", mask );
-        }
-      }
+      if (getnameinfo(ifa->ifa_netmask, sizeof(struct sockaddr_in), mask, NI_MAXHOST, NULL, 0, NI_NUMERICHOST))
+        continue;
+
+      // Back str to ip4
+      // From my IP     : 172.20.10.1
+      // And broadcast  : 255.255.255.240
+      // Broadcast addr : 172.20.10.15 
+      struct in_addr ip_addr, subnet_mask, broadcast_addr;
+      inet_pton(AF_INET, host, &ip_addr);
+      inet_pton(AF_INET, mask, &subnet_mask);
+      broadcast_addr.s_addr = ip_addr.s_addr | ~subnet_mask.s_addr;
+      char broadcast_str[INET_ADDRSTRLEN];
+      inet_ntop( AF_INET, &broadcast_addr, broadcast_str, INET_ADDRSTRLEN );
+
+      dbg( DbgInfo, "Name:%-16s IP:%-16s Mask:%-16s Broadcast:%-16s\n", ifa->ifa_name, host, mask, broadcast_str );
+      make_network_interface_t( out_interfaces + num_interfaces, host, ifa->ifa_name, broadcast_str );
+      ++num_interfaces;
     }
   }
 

@@ -17,6 +17,8 @@ void GDFujiController::_bind_methods() {
   ClassDB::bind_method(D_METHOD("toggle"), &GDFujiController::toggle);
   ClassDB::bind_method(D_METHOD("set_max_time_per_step"), &GDFujiController::set_max_time_per_step);
   ClassDB::bind_method(D_METHOD("send_udp_message"), &GDFujiController::send_udp_message);
+  ClassDB::bind_method(D_METHOD("get_local_addresses"), &GDFujiController::get_local_addresses);
+
   ADD_SIGNAL(MethodInfo("camera_event", PropertyInfo(Variant::STRING, "line")));
   ADD_SIGNAL(MethodInfo("camera_log", PropertyInfo(Variant::STRING, "line")));
   ADD_SIGNAL(MethodInfo("download_progress", PropertyInfo(Variant::INT, "bytes_downloaded"), PropertyInfo(Variant::INT, "bytes_required")));
@@ -103,15 +105,28 @@ void GDFujiController::_process(double delta) {
 
 }
 
-int GDFujiController::send_udp_message( const String& address, int port, const String& msg) {
-  CharString addr_utf8 = address.utf8();
+int GDFujiController::send_udp_message( const String& bind_addr, int port, const String& msg, const String& broadcast) {
+  CharString addr_utf8 = bind_addr.utf8();
   CharString msg_utf8 = msg.utf8();
+  CharString broadcast_utf8 = broadcast.utf8();
   const char* c_addr = addr_utf8.get_data();
   const char* c_msg = msg_utf8.get_data();
+  const char* c_broadcast = broadcast_utf8.get_data();
   channel_t ch;
-  if( !ch_create( &ch, address.utf8().get_data(), port ) )
+  if( !ch_create( &ch, bind_addr.utf8().get_data(), port ) )
     return -100;
-  int rc = ch_broadcast( &ch, c_msg, strlen( c_msg ) );
+  int rc = ch_broadcast( &ch, c_msg, strlen( c_msg ), c_broadcast );
   ch_close( &ch );
   return rc;
+}
+
+Array GDFujiController::get_local_addresses() {
+  Array arr;
+  network_interface_t net_ifs[16];
+  int n = ch_get_local_network_interfaces( net_ifs, 16 );
+  for( int i=0; i<n; ++i ) {
+    String ip( net_ifs[i].ip );
+    arr.append( ip );
+  }
+  return arr;
 }

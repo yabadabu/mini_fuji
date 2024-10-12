@@ -26,7 +26,13 @@ func _process( _delta ):
 	%StatusLabel.text = "frame: %d" % [frame_counter]
 
 func _on_send_pressed():
-	var addr = "udp:%s" % %IPEdit.text
-	addLog( "GD.addr %s" % [addr] )
-	var rc = fuji.send_udp_message( addr, 5002, "Godot knocks the door" )
-	addLog( "Sending udp msg to %s => %d " % [addr, rc] )
+	var bindaddr = "udp:%s" % %BindEdit.text
+	var broadcast = %BroadEdit.text
+	addLog( "GD.addr %s %s" % [bindaddr, broadcast] )
+	var rc = fuji.send_udp_message( bindaddr, 5002, "Godot knocks the door", broadcast )
+	addLog( "Sending udp msg from %s to %s => %d " % [bindaddr, broadcast, rc] )
+
+func _on_dump_interfaces_pressed():
+	var ips : Array = fuji.get_local_addresses();
+	for ip in ips:
+		addLog( ip )

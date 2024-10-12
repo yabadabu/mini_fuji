@@ -32,9 +32,16 @@ layout_mode = 2
 size_flags_vertical = 4
 text = "Send"
 
-[node name="IPEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+[node name="BindEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "0.0.0.0"
+placeholder_text = "0.0.0.0"
+
+[node name="BroadEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 text = "255.255.255.255"
 placeholder_text = "0.0.0.0"
@@ -64,14 +71,24 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Status:"
 
-[node name="ClearButton" type="Button" parent="VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="ClearButton" type="Button" parent="VBoxContainer/HBoxContainer2"]
 layout_mode = 2
 size_flags_vertical = 4
 text = "Clear
+"
+
+[node name="DumpInterfaces" type="Button" parent="VBoxContainer/HBoxContainer2"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Network IPs
 "
 
 [node name="GDFujiController" type="GDFujiController" parent="."]
 
 [connection signal="pressed" from="VBoxContainer/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/Send" to="." method="_on_send_pressed"]
-[connection signal="pressed" from="VBoxContainer/ClearButton" to="." method="_on_clear_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer2/ClearButton" to="." method="_on_clear_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxContainer2/DumpInterfaces" to="." method="_on_dump_interfaces_pressed"]
