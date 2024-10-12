@@ -83,21 +83,21 @@ static int set_non_blocking_socket(socket_t sockfd) {
 static void set_tcp_no_delay(socket_t sockfd ) {
   int flag = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(int)) < 0) {
-    perror("setsockopt(TCP_NODELAY) failed");
+    dbg( DbgError, "setsockopt(TCP_NODELAY) failed %d", errno);
   }
 }
 
 static void set_reuse_addr(socket_t sockfd ) {
   int optval = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval)) < 0) {
-    perror("setsockopt");
+    dbg( DbgError, "setsockopt failed %d", errno);
   }
 }
 
 static bool set_udp_broadcast(socket_t sockfd ) {
   int broadcast_permission = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast_permission, sizeof(broadcast_permission)) < 0) {
-    perror("setsockopt (SO_BROADCAST)");
+    dbg( DbgError, "setsockopt (SO_BROADCAST) %d", errno);
     return false;
   }
   return true;
@@ -113,8 +113,8 @@ static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port 
   addr->sin_family = AF_INET;
   addr->sin_port = htons( port );
   if (inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
-      dbg( DbgError, "ch_make_address.inet_pton %d", sys_error_code );
-      return false;
+    dbg( DbgInfo, "ch_make_address.inet_pton failed %s:%d -> %d\n", ip, port, errno);
+    return false;
   }
   return true;
 }
@@ -129,7 +129,11 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   // Do the actual broadcast
   int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
   if( rc < 0) {
+<<<<<<< HEAD
     dbg( DbgError, "ch_broadcast.sendto(%d bytes) ch->port:%d => %d (Err:%d)", msg_size, ch->port, rc, sys_error_code);
+=======
+    dbg( DbgInfo, "ch_broadcast.sendto failed %s:%d -> %d\n", broadcast_ip, ch->port, errno);
+>>>>>>> 6d1bd00 (mini steps)
     ch_close( ch );
     return -1;
   }
@@ -198,6 +202,20 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       sys_close(sockfd);
       return false;
     }
+    if( is_broadcast )
+      dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
+
+    // struct sockaddr_in local_addr;
+    // memset(&local_addr, 0, sizeof(local_addr));
+    // local_addr.sin_family = AF_INET;
+    // local_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // Bind to any local address
+    // local_addr.sin_port = htons(port);  // Let OS choose the port
+    // if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
+    //   perror("bind");
+    //   sys_close(sockfd);
+    //   return false;
+    // }
+    // dbg( DbgInfo, "UDP Bind OK\n");
 
   }
   else if( strncmp( conn_info, "tcp_server:", 11 ) == 0 ) {
@@ -213,7 +231,11 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
     sprintf(str_port, "%d", port);
 
     if (getaddrinfo(ip, str_port, &hints, &servinfo) != 0) {
+<<<<<<< HEAD
       dbg( DbgError, "tcp_server getaddrinfo failed %d", sys_error_code);
+=======
+      dbg( DbgError, "getaddrinfo failed %d", errno);
+>>>>>>> 6d1bd00 (mini steps)
       return false;
     }
 
@@ -235,13 +257,21 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       }
 
       if (bind(sockfd, p->ai_addr, (int)p->ai_addrlen) < 0) {
+<<<<<<< HEAD
         dbg( DbgError, "tcp_server bind failed %d", sys_error_code);
+=======
+        dbg( DbgError, "bind failed %d", errno);
+>>>>>>> 6d1bd00 (mini steps)
         sys_close(sockfd);
         continue;
       }
       
       if (listen(sockfd, 5) < 0) {
+<<<<<<< HEAD
         dbg( DbgError, "tcp_server listen failed %d", sys_error_code);
+=======
+        dbg( DbgError, "listen failed %d", errno);
+>>>>>>> 6d1bd00 (mini steps)
         sys_close(sockfd);
         continue;
       }
@@ -314,7 +344,7 @@ bool ch_can_io( channel_t* ch, int io_op, struct timeval* tv ) {
   // Use select() to wait for the socket to be ready for reading/writing
   int ret = select((int)(sockfd + 1), read_fds, write_fds, NULL, tv);
   if (ret < 0) {
-    perror("select");
+    dbg( DbgError, "select failed %d", errno);
     return false;
 
   } else if (ret > 0 && FD_ISSET(sockfd, &fds)) {
@@ -482,6 +512,14 @@ int  ch_get_local_network_interfaces( network_interface_t* out_interfaces, uint3
       if (getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
         make_network_interface_t( out_interfaces + num_interfaces, host, ifa->ifa_name );
         ++num_interfaces;
+      }
+
+      char mask[NI_MAXHOST];
+      if( ifa->ifa_netmask ) {
+        if (getnameinfo(ifa->ifa_netmask, sizeof(struct sockaddr_in), mask, NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+          dbg( DbgInfo, "Host is %s\n", host );
+          dbg( DbgInfo, "Mask is %s\n", mask );
+        }
       }
     }
   }

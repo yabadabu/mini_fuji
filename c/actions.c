@@ -89,15 +89,18 @@ static void eval_next_ip( evaluation_t* ev ) {
   ev->ip += 1;
   ev->steps_in_ip = 0;
   ev->iteration = 0;
+  ev->cycles_in_substep = 0;
 }
 
 static void eval_next_iteration( evaluation_t* ev ) {
   ev->steps_in_ip = 0;
   ev->iteration += 1;
+  ev->cycles_in_substep = 0;
 }
 
 static void eval_next_substep( evaluation_t* ev ) {
   ev->steps_in_ip += 1;
+  ev->cycles_in_substep = 0;
 }
 
 bool eval_error( evaluation_t* ev, const char* msg ) {
@@ -120,7 +123,7 @@ bool eval_step( evaluation_t* ev ) {
   const op_code_t* cmd = ev->actions + ev->ip;
   int sub_step = ev->steps_in_ip;
 
-  dbg( DbgTrace, "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );
+  //dbg( DbgTrace, "eval.step( Cmd:%d IP:%d.%d.%d\n", cmd->op_code, ev->ip, ev->iteration, sub_step );
   switch( cmd->op_code ) {
 
   case OP_DISCOVER_CAMERA:
@@ -129,25 +132,51 @@ bool eval_step( evaluation_t* ev ) {
       dbg( DbgInfo, "OP_DISCOVER_CAMERA. Start\n");
       network_interface_t ni[16];
       int num_interfaces = ch_get_local_network_interfaces( ni, 16 );
-      const char* local_ip = NULL;
+      int best_idx = -1;
+      bool best_is_ethernet = false;
+      bool best_is_bridge = false;
       for( int i=0; i<num_interfaces; ++i ) {
-        if( strcmp( ni[i].ip, "127.0.0.1" ) != 0 ) {
-          dbg( DbgInfo, "%16s : %s\n", ni[i].ip, ni[i].name );
-          if( !local_ip )
-            local_ip = ni[i].ip;
+
+        // Skip localhost
+        if( strcmp( ni[i].ip, "127.0.0.1" ) == 0 )
+          continue;
+
+
+        // in iOS en0/en1 are the ethernet adapters
+        //        pdp_ip* are 3G,4G cellular data
+        //        ipsec*  are VPN addresses
+        //        bridge* are the WIFI shared connections
+        bool is_ethernet = strncmp( ni[i].name, "en", 2 ) == 0;
+        bool is_bridge = false; //strncmp( ni[i].name, "bridge", 6 ) == 0;
+
+        bool keep_it = ( best_idx == -1 )
+                    || ( is_bridge && !best_is_bridge)
+                    || ( !best_is_bridge && is_ethernet && !best_is_ethernet );
+        dbg( DbgInfo, "%16s : %s (E:%d B:%d -> %d)\n", ni[i].ip, ni[i].name, is_ethernet, is_bridge, keep_it );
+        if( keep_it ) {
+          best_idx = i;
+          best_is_ethernet = is_ethernet;
+          best_is_bridge = is_bridge;
         }
       }
+
+      const char* local_ip = ( best_idx != -1 ) ? ni[ best_idx ].ip : NULL;
       if( !local_ip )
-        return eval_error( ev, "Failed to identify local ip" ); 
+        return eval_error( ev, "Failed to identify local ethernet ip" ); 
+
+      dbg( DbgInfo, "Using localIP %s\n", local_ip);
       if( !discovery_start( local_ip ) )
         return eval_error( ev, "Failed to discovery_start" ); 
       eval_next_substep( ev );
 
     } else if( sub_step == 1 ) {
-      dbg( DbgInfo, "OP_DISCOVER_CAMERA. Waiting for camera\n");
+      if( ev->cycles_in_substep == 0 )
+        dbg( DbgInfo, "OP_DISCOVER_CAMERA. Waiting for camera\n");
 
       if( discovery_update( &ev->camera_info, ev->max_time_per_step ) )
         eval_next_substep( ev );
+      else
+        ev->cycles_in_substep +=1;
 
     } else if( sub_step == 2 ) {
       dbg( DbgInfo, "OP_DISCOVER_CAMERA. Camera found\n");

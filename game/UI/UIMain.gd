@@ -6,7 +6,7 @@ var frame_counter = 0;
 func _ready():
 	fuji.camera_event.connect( addLog )
 	fuji.camera_log.connect( addLog )
-	fuji.set_max_time_per_step( 1000 * 1000 );
+	fuji.set_max_time_per_step( 1000 * 3 );
 
 func addLog( new_text : String ):
 	var line : Label = Label.new()

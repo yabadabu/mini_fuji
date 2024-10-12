@@ -49,6 +49,7 @@ typedef struct {
   int           ip;
   int           steps_in_ip;
   int           iteration;
+  int           cycles_in_substep;
 
   // context ..
   storage_ids_t storage_ids;

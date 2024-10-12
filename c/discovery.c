@@ -6,6 +6,7 @@
 #include "discovery.h"
 #include "channel.h"
 #include "blob.h"
+#include "dbg.h"
 
 typedef struct {
   blob_t    buff;
@@ -16,6 +17,15 @@ typedef struct {
 
 #define DISCOVERY_BROADCAST_UDP_PORT    51562
 #define DISCOVERY_SERVER_ANSWERS        51560
+
+// Camera is listenning for msg in port 51562
+// App creates a TCP Server listenning on port 51560
+// App sends a udp broadcast msg with this IP address
+// Camera gets the udp messages and creates a TCP connection to the host defined in the msg and port 51560
+// Camera sends in this msg his IP and port, like 192.168.1.136 and 15740
+// Camera closes the connection
+// App can close the TCP server
+// App starts a TCP connection to the camera IP and port
 
 static discovery_service_t ds;
 
@@ -49,6 +59,8 @@ bool discovery_start( const char* local_ip ) {
     return false;
   assert( ds.ch_discovery.port = DISCOVERY_SERVER_ANSWERS );
 
+  dbg( DbgInfo, "Discovery Msg: %s\n", ds.discovery_msg.data );
+
   return true;
 }
 
@@ -64,6 +76,7 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_usecs ) {
   const int ms_to_usecs = 1000;
 
   if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_usecs ) ) {
+    dbg( DbgInfo, "Someone knock the door!\n");
 
     while( !ch_read_blob( &ch_client, &ds.buff, 0 ) )
       ch_wait( ms_to_usecs );

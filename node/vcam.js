@@ -1,7 +1,9 @@
 const net = require("net");
 var udp = require('dgram');
 
-const port = 51562;
+// This is the port the camera is waiting for connections for TCP for controlling. 
+// But could be anyport, not part of the autodiscovery
+const port = 5005;
 const my_ip = "192.168.1.136"
 
 function connectToClient( ip, port, msg ) {
@@ -45,7 +47,7 @@ udp_server.on('listening', () => {
   const address = udp_server.address();
   console.log(`UDP.Server listening ${address.address}:${address.port}`);
 });
-udp_server.bind(5002);
+udp_server.bind(51562);
 
 
 const server = net.createServer((socket) => {
