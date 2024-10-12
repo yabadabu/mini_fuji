@@ -8,7 +8,7 @@ typedef struct {
    callback_dbg_fn callback;
 } callback_dbg_t;
 
-static callback_dbg_t callback_dbg = (callback_dbg_t){ .context = NULL, .level = DbgError, .callback = NULL };
+static callback_dbg_t callback_dbg = { .context = NULL, .level = DbgError, .callback = NULL };
 
 void setDbgCallback( void* new_context, enum eDbgLevel new_level, callback_dbg_fn new_callback ) {
   callback_dbg.context = new_context;

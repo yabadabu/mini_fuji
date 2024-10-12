@@ -16,6 +16,7 @@ void GDFujiController::_bind_methods() {
   ClassDB::bind_method(D_METHOD("stop"), &GDFujiController::stop);
   ClassDB::bind_method(D_METHOD("toggle"), &GDFujiController::toggle);
   ClassDB::bind_method(D_METHOD("set_max_time_per_step"), &GDFujiController::set_max_time_per_step);
+  ClassDB::bind_method(D_METHOD("send_udp_message"), &GDFujiController::send_udp_message);
   ADD_SIGNAL(MethodInfo("camera_event", PropertyInfo(Variant::STRING, "line")));
   ADD_SIGNAL(MethodInfo("camera_log", PropertyInfo(Variant::STRING, "line")));
   ADD_SIGNAL(MethodInfo("download_progress", PropertyInfo(Variant::INT, "bytes_downloaded"), PropertyInfo(Variant::INT, "bytes_required")));
@@ -57,8 +58,12 @@ static void on_dbg_msg( void* context, enum eDbgLevel level, const char* msg ) {
 GDFujiController::GDFujiController() {
   setDbgCallback( this, DbgTrace, &on_dbg_msg );
   is_valid = conn_create( &conn );
-  conn.on_event = (callback_event_t) { .context = this, .callback = &on_event };
-  conn.on_progress = (callback_progress_t){ .context = this, .callback = &on_download_progress, .enabled = false };
+  
+  conn.on_event.context = this;
+  conn.on_event.callback = &on_event;
+  conn.on_progress.context = this;
+  conn.on_progress.callback = &on_download_progress;
+  conn.on_progress.enabled = false;
   eval_create( &ev, &conn, actions_take );
   ev.max_time_per_step = 1000;
 }
@@ -96,4 +101,15 @@ void GDFujiController::_process(double delta) {
     active = false;
   }
 
+}
+
+int GDFujiController::send_udp_message( const String& address, int port, const String& msg) {
+  const char* c_addr = address.utf8().get_data();
+  const char* c_msg = msg.utf8().get_data();
+  channel_t ch;
+  if( !ch_create( &ch, c_addr, port ) )
+    return -100;
+  int rc = ch_broadcast( &ch, c_msg, strlen( c_msg ) );
+  ch_close( &ch );
+  return rc;
 }

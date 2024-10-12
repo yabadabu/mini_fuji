@@ -33,6 +33,7 @@ public:
   void toggle();
   void _process(double delta) override;
   void set_max_time_per_step( int new_max_time_per_step_usecs );
+  int send_udp_message( const String& address, int port, const String& msg);
 };
 
 }

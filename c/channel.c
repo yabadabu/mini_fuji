@@ -4,11 +4,13 @@
 #include <string.h>
 #include <stdio.h>      // perror
 #include <stdlib.h>
+#include <dbg.h>
 
 // --------------------------------------------------------------------
 #ifdef _WIN32
 
 #define sys_close               closesocket
+#define sys_error_code          WSAGetLastError()
 #define CH_ERR_WOULD_BLOCK      WSAEWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS WSAEWOULDBLOCK
 
@@ -36,6 +38,7 @@
 #include <ifaddrs.h>    // getifaddrs
 
 #define sys_close               close
+#define sys_error_code          errno
 #define CH_ERR_WOULD_BLOCK      EWOULDBLOCK
 #define CH_ERR_CONN_IN_PROGRESS EINPROGRESS
 
@@ -110,7 +113,7 @@ static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port 
   addr->sin_family = AF_INET;
   addr->sin_port = htons( port );
   if (inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
-      perror("inet_pton");
+      dbg( DbgError, "ch_make_address.inet_pton %d", sys_error_code );
       return false;
   }
   return true;
@@ -120,17 +123,15 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   assert( ch->is_udp );
 
   struct sockaddr_in addr;
-  if( !ch_make_address( &addr, broadcast_ip, ch->port ) ) {
-      ch_close( ch );
-      return -1;
-  }
+  if( !ch_make_address( &addr, broadcast_ip, ch->port ) )
+    return -1;
 
   // Do the actual broadcast
   int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
   if( rc < 0) {
-      perror("sendto");
-      ch_close( ch );
-      return -1;
+    dbg( DbgError, "ch_broadcast.sendto(%d bytes) ch->port:%d => %d (Err:%d)", msg_size, ch->port, rc, sys_error_code);
+    ch_close( ch );
+    return -1;
   }
 
   return rc;
@@ -148,9 +149,9 @@ void ch_clean( channel_t* ch ) {
 // ("127.0.0.1", port, AF_INET )
 // ("::", port, AF_INET6 )
 
-// tcp:192.168.1.27:8080    -> tcp client connection to server at port 192.168.1.27:8080
-// tcp_server:0.0.0.0:4800  -> tcp server at port 4800
-// udp:0.0.0.0:4700         -> Broadcast udp to port 4700
+// tcp:192.168.1.27    8080 -> tcp client connection to server at port 192.168.1.27:8080
+// tcp_server:0.0.0.0  4800 -> tcp server at port 4800
+// udp:0.0.0.0         4700 -> Broadcast udp to port 4700
 bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
   static bool global_initialization = false;
@@ -186,13 +187,14 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-      perror("socket");
+      dbg( DbgError, "udp socket creation failed %d", sys_error_code);
       return false;
     }
 
     // Enable the broadcast option
     bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
     if( is_broadcast && !set_udp_broadcast( sockfd ) ) {
+      dbg( DbgError, "udp set_udp_broadcast failed %d", sys_error_code);
       sys_close(sockfd);
       return false;
     }
@@ -211,7 +213,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
     sprintf(str_port, "%d", port);
 
     if (getaddrinfo(ip, str_port, &hints, &servinfo) != 0) {
-      perror( "getaddrinfo" );
+      dbg( DbgError, "tcp_server getaddrinfo failed %d", sys_error_code);
       return false;
     }
 
@@ -226,20 +228,20 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       if (p->ai_family == AF_INET6) {
         int no = 0;
         if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no)) != 0) {
-          perror("setsockopt IPV6_V6ONLY failed");
+          dbg( DbgError, "tcp_server setsockopt.IPV6_V6ONLY failed %d", sys_error_code);
           sys_close(sockfd);
           continue;
         }
       }
 
       if (bind(sockfd, p->ai_addr, (int)p->ai_addrlen) < 0) {
-        perror( "bind failed");
+        dbg( DbgError, "tcp_server bind failed %d", sys_error_code);
         sys_close(sockfd);
         continue;
       }
       
       if (listen(sockfd, 5) < 0) {
-        perror( "listen failed" );
+        dbg( DbgError, "tcp_server listen failed %d", sys_error_code);
         sys_close(sockfd);
         continue;
       }
@@ -256,7 +258,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-      perror("socket");
+      dbg( DbgError, "tcp socket creation failed %d", sys_error_code);
       return false;
     }
 
@@ -267,9 +269,10 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
     }
 
     if (connect(sockfd, (struct sockaddr*)&remote_addr, sizeof(remote_addr)) < 0) {
-      if (errno != EINPROGRESS) {
+      int err_code = sys_error_code;
+      if (err_code != EINPROGRESS) {
         // EINPROGRESS indicates that the connection is in progress in non-blocking mode
-        perror("connect");
+        dbg( DbgError, "tcp connect failed %d", err_code);
         sys_close(sockfd);
         return false;
 
@@ -283,6 +286,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
   if( !ch->is_udp ) {
     if (set_non_blocking_socket(sockfd) < 0) {
+      dbg( DbgError, "tcp set_non_blocking_socket failed %d", sys_error_code);
       sys_close(sockfd);
       return false;
     }
@@ -341,7 +345,8 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
 
     int bytes_read = recv(sockfd, obuf, max_length - total_bytes_read, 0);
     if (bytes_read < 0) {
-        if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
+        int err_code = sys_error_code;
+        if (err_code == EAGAIN || err_code == CH_ERR_WOULD_BLOCK ) {
             break;
         } else {
             perror("read");
@@ -370,7 +375,8 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
 
     int bytes_written = send(sockfd, ibuf, length - total_bytes_written, 0);
     if (bytes_written < 0) {
-      if (errno == EAGAIN || errno == CH_ERR_WOULD_BLOCK ) {
+      int err_code = sys_error_code;
+      if (err_code == EAGAIN || err_code == CH_ERR_WOULD_BLOCK ) {
         break;
 
       } else {

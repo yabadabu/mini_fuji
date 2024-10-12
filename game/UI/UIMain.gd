@@ -24,3 +24,8 @@ func _on_start_button_pressed():
 func _process( _delta ):
 	frame_counter += 1
 	%StatusLabel.text = "frame: %d" % [frame_counter]
+
+func _on_send_pressed():
+	var addr = "udp://%s" % %IPEdit.text
+	var rc = fuji.send_udp_message( addr, 5002, "Godot knocks the door" )
+	addLog( "Sending udp msg to %s => %d " % [addr, rc] )
