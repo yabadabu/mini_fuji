@@ -27,5 +27,6 @@ func _process( _delta ):
 
 func _on_send_pressed():
 	var addr = "udp:%s" % %IPEdit.text
+	addLog( "GD.addr %s" % [addr] )
 	var rc = fuji.send_udp_message( addr, 5002, "Godot knocks the door" )
 	addLog( "Sending udp msg to %s => %d " % [addr, rc] )
