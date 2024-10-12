@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>      // perror
 #include <stdlib.h>
-#include <dbg.h>
+#include "dbg.h"
 
 // --------------------------------------------------------------------
 #ifdef _WIN32

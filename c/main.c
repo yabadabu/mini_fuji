@@ -70,11 +70,29 @@ bool take_shot() {
   return true;
 }
 
+int send_udp( const char* addr ) {
+  int port = 5002;
+  channel_t ch;
+  if( !ch_create( &ch, addr, port ))
+    return -1;
+  if (!ch_broadcast(&ch, "Hello", 5))
+    return -2;
+  ch_close(&ch);
+  return 0;
+}
+
 
 int main( int argc, char** argv ) {
+  setDbgCallback(NULL, DbgTrace, &my_output_fn);
 
-  if( !take_shot() )
-    return -1;
+  if (argc > 1) {
+    if (!send_udp(argv[1]))
+      return -1;
+    dbg(DbgInfo, "All good\n");
+  }
+
+  //if( !take_shot() )
+  //  return -1;
   /*
   if( !test_evals() )
     return -1;

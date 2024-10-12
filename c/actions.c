@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,7 +12,7 @@
 int prop_arr_find_idx( prop_array_t* prar, uint32_t prop_id ) {
   assert( prar );
   uint32_t* ids = prar->ids;
-  for( int i=0; i<prar->count; ++i, ++ids ) {
+  for(uint32_t i=0; i<prar->count; ++i, ++ids ) {
     if( *ids == prop_id )
       return i;
   } 
@@ -24,7 +25,7 @@ void prop_arr_clear( prop_array_t* prar ) {
 
 void prop_arr_dump( prop_array_t* prar ) {
   dbg( DbgInfo, "Property Array contains %d properties/values\n", prar->count );
-  for( int i=0; i<prar->count; ++i ) {
+  for(uint32_t i=0; i<prar->count; ++i ) {
     uint32_t prop_id = prar->ids[ i ];
     uint32_t ivalue = prar->ivalues[ i ];
     uint32_t read_value = 0xffffffff;

@@ -19,21 +19,25 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\c\actions.h" />
+    <ClInclude Include="..\c\actions_list.h" />
     <ClInclude Include="..\c\blob.h" />
     <ClInclude Include="..\c\channel.h" />
     <ClInclude Include="..\c\connection.h" />
+    <ClInclude Include="..\c\dbg.h" />
     <ClInclude Include="..\c\discovery.h" />
     <ClInclude Include="..\c\properties.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\c\api.c" />
+    <ClCompile Include="..\c\actions.c" />
     <ClCompile Include="..\c\blob.c" />
     <ClCompile Include="..\c\channel.c" />
     <ClCompile Include="..\c\commands.c" />
     <ClCompile Include="..\c\connection.c" />
+    <ClCompile Include="..\c\dbg.c" />
     <ClCompile Include="..\c\discovery.c" />
+    <ClCompile Include="..\c\main.c" />
     <ClCompile Include="..\c\properties.c" />
-    <ClCompile Include="..\c\tests.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

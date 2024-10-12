@@ -6,15 +6,19 @@
     <ClInclude Include="..\c\channel.h" />
     <ClInclude Include="..\c\connection.h" />
     <ClInclude Include="..\c\properties.h" />
+    <ClInclude Include="..\c\actions_list.h" />
+    <ClInclude Include="..\c\actions.h" />
+    <ClInclude Include="..\c\dbg.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\c\tests.c" />
     <ClCompile Include="..\c\blob.c" />
     <ClCompile Include="..\c\channel.c" />
     <ClCompile Include="..\c\commands.c" />
     <ClCompile Include="..\c\connection.c" />
     <ClCompile Include="..\c\discovery.c" />
-    <ClCompile Include="..\c\api.c" />
     <ClCompile Include="..\c\properties.c" />
+    <ClCompile Include="..\c\actions.c" />
+    <ClCompile Include="..\c\dbg.c" />
+    <ClCompile Include="..\c\main.c" />
   </ItemGroup>
 </Project>
