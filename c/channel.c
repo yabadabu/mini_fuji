@@ -129,11 +129,7 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   // Do the actual broadcast
   int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
   if( rc < 0) {
-<<<<<<< HEAD
     dbg( DbgError, "ch_broadcast.sendto(%d bytes) ch->port:%d => %d (Err:%d)", msg_size, ch->port, rc, sys_error_code);
-=======
-    dbg( DbgInfo, "ch_broadcast.sendto failed %s:%d -> %d\n", broadcast_ip, ch->port, errno);
->>>>>>> 6d1bd00 (mini steps)
     ch_close( ch );
     return -1;
   }
@@ -231,11 +227,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
     sprintf(str_port, "%d", port);
 
     if (getaddrinfo(ip, str_port, &hints, &servinfo) != 0) {
-<<<<<<< HEAD
       dbg( DbgError, "tcp_server getaddrinfo failed %d", sys_error_code);
-=======
-      dbg( DbgError, "getaddrinfo failed %d", errno);
->>>>>>> 6d1bd00 (mini steps)
       return false;
     }
 
@@ -257,21 +249,13 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       }
 
       if (bind(sockfd, p->ai_addr, (int)p->ai_addrlen) < 0) {
-<<<<<<< HEAD
         dbg( DbgError, "tcp_server bind failed %d", sys_error_code);
-=======
-        dbg( DbgError, "bind failed %d", errno);
->>>>>>> 6d1bd00 (mini steps)
         sys_close(sockfd);
         continue;
       }
       
       if (listen(sockfd, 5) < 0) {
-<<<<<<< HEAD
         dbg( DbgError, "tcp_server listen failed %d", sys_error_code);
-=======
-        dbg( DbgError, "listen failed %d", errno);
->>>>>>> 6d1bd00 (mini steps)
         sys_close(sockfd);
         continue;
       }
