@@ -57,14 +57,14 @@ static int set_non_blocking_socket(socket_t sockfd) {
   // Get the current file descriptor flags
   int flags = fcntl(sockfd, F_GETFL, 0);
   if (flags == -1) {
-      perror("fcntl(F_GETFL)");
+      dbg( DbgError, "fcntl(F_GETFL)\n");
       return -1;
   }
 
   // Set the socket to non-blocking mode
   flags |= O_NONBLOCK;
   if (fcntl(sockfd, F_SETFL, flags) == -1) {
-      perror("fcntl(F_SETFL)");
+      dbg( DbgError, "fcntl(F_SETFL)\n");
       return -1;
   }
 
@@ -83,21 +83,21 @@ static int set_non_blocking_socket(socket_t sockfd) {
 static void set_tcp_no_delay(socket_t sockfd ) {
   int flag = 1;
   if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(int)) < 0) {
-    dbg( DbgError, "setsockopt(TCP_NODELAY) failed %d", errno);
+    dbg( DbgError, "setsockopt(TCP_NODELAY) failed %d\n", sys_error_code);
   }
 }
 
 static void set_reuse_addr(socket_t sockfd ) {
   int optval = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval)) < 0) {
-    dbg( DbgError, "setsockopt failed %d", errno);
+    dbg( DbgError, "setsockopt failed %d\n", sys_error_code);
   }
 }
 
 static bool set_udp_broadcast(socket_t sockfd ) {
   int broadcast_permission = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast_permission, sizeof(broadcast_permission)) < 0) {
-    dbg( DbgError, "setsockopt (SO_BROADCAST) %d", errno);
+    dbg( DbgError, "setsockopt (SO_BROADCAST) %d\n", sys_error_code);
     return false;
   }
   return true;
@@ -113,7 +113,7 @@ static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port 
   addr->sin_family = AF_INET;
   addr->sin_port = htons( port );
   if (inet_pton(AF_INET, ip, &addr->sin_addr) <= 0) {
-    dbg( DbgInfo, "ch_make_address.inet_pton failed %s:%d -> %d\n", ip, port, errno);
+    dbg( DbgInfo, "ch_make_address.inet_pton failed %s:%d -> %d\n", ip, port, sys_error_code);
     return false;
   }
   return true;
@@ -121,6 +121,7 @@ static bool ch_make_address( struct sockaddr_in* addr, const char* ip, int port 
 
 int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   assert( ch->is_udp );
+  dbg( DbgInfo, "ch_broadcast on fd %d\n", ch->fd ); 
 
   struct sockaddr_in addr;
   if( !ch_make_address( &addr, broadcast_ip, ch->port ) )
@@ -129,7 +130,7 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size ) {
   // Do the actual broadcast
   int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
   if( rc < 0) {
-    dbg( DbgError, "ch_broadcast.sendto(%d bytes) ch->port:%d => %d (Err:%d)", msg_size, ch->port, rc, sys_error_code);
+    dbg( DbgError, "ch_broadcast.sendto(%d bytes) ch->port:%d => %d (Err:%d)\n", msg_size, ch->port, rc, sys_error_code);
     ch_close( ch );
     return -1;
   }
@@ -153,6 +154,8 @@ void ch_clean( channel_t* ch ) {
 // tcp_server:0.0.0.0  4800 -> tcp server at port 4800
 // udp:0.0.0.0         4700 -> Broadcast udp to port 4700
 bool ch_create( channel_t* ch, const char* conn_info, int port ) {
+  
+  dbg( DbgInfo, "ch_create %s port:%d\n", conn_info, port);
 
   static bool global_initialization = false;
   if (!global_initialization) {
@@ -181,25 +184,27 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
   //printf( "IP: %s\n", ip );
   //printf( "Port: %d\n", port );
 
-  socket_t sockfd = 0;
+  socket_t sockfd = -1;
   if( strncmp( conn_info, "udp:", 4 ) == 0 ) {
     ch->is_udp = true;
+    dbg( DbgInfo, "UDP creation\n");
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
-      dbg( DbgError, "udp socket creation failed %d", sys_error_code);
+      dbg( DbgError, "udp socket creation failed %d\n", sys_error_code);
       return false;
     }
+    dbg( DbgInfo, "UDP create fd => %d\n", sockfd);
 
     // Enable the broadcast option
     bool is_broadcast = strcmp( ip, broadcast_ip ) == 0;
     if( is_broadcast && !set_udp_broadcast( sockfd ) ) {
-      dbg( DbgError, "udp set_udp_broadcast failed %d", sys_error_code);
+      dbg( DbgError, "udp set_udp_broadcast failed %d\n", sys_error_code);
       sys_close(sockfd);
       return false;
     }
-    if( is_broadcast )
-      dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
+    //if( is_broadcast )
+    dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
 
     // struct sockaddr_in local_addr;
     // memset(&local_addr, 0, sizeof(local_addr));
@@ -242,20 +247,20 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       if (p->ai_family == AF_INET6) {
         int no = 0;
         if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no)) != 0) {
-          dbg( DbgError, "tcp_server setsockopt.IPV6_V6ONLY failed %d", sys_error_code);
+          dbg( DbgError, "tcp_server setsockopt.IPV6_V6ONLY failed %d\n", sys_error_code);
           sys_close(sockfd);
           continue;
         }
       }
 
       if (bind(sockfd, p->ai_addr, (int)p->ai_addrlen) < 0) {
-        dbg( DbgError, "tcp_server bind failed %d", sys_error_code);
+        dbg( DbgError, "tcp_server bind failed %d\n", sys_error_code);
         sys_close(sockfd);
         continue;
       }
       
       if (listen(sockfd, 5) < 0) {
-        dbg( DbgError, "tcp_server listen failed %d", sys_error_code);
+        dbg( DbgError, "tcp_server listen failed %d\n", sys_error_code);
         sys_close(sockfd);
         continue;
       }
@@ -272,7 +277,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-      dbg( DbgError, "tcp socket creation failed %d", sys_error_code);
+      dbg( DbgError, "tcp socket creation failed %d\n", sys_error_code);
       return false;
     }
 
@@ -286,7 +291,7 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
       int err_code = sys_error_code;
       if (err_code != EINPROGRESS) {
         // EINPROGRESS indicates that the connection is in progress in non-blocking mode
-        dbg( DbgError, "tcp connect failed %d", err_code);
+        dbg( DbgError, "tcp connect failed %d\n", err_code);
         sys_close(sockfd);
         return false;
 
@@ -297,10 +302,14 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
 
     set_tcp_no_delay( sockfd );
   }
+  else {
+    dbg( DbgError, "ch_create invalid conn str" );
+    return false;
+  }
 
   if( !ch->is_udp ) {
     if (set_non_blocking_socket(sockfd) < 0) {
-      dbg( DbgError, "tcp set_non_blocking_socket failed %d", sys_error_code);
+      dbg( DbgError, "tcp set_non_blocking_socket failed %d\n", sys_error_code);
       sys_close(sockfd);
       return false;
     }
@@ -328,7 +337,7 @@ bool ch_can_io( channel_t* ch, int io_op, struct timeval* tv ) {
   // Use select() to wait for the socket to be ready for reading/writing
   int ret = select((int)(sockfd + 1), read_fds, write_fds, NULL, tv);
   if (ret < 0) {
-    dbg( DbgError, "select failed %d", errno);
+    dbg( DbgError, "select failed %d\n", errno);
     return false;
 
   } else if (ret > 0 && FD_ISSET(sockfd, &fds)) {
