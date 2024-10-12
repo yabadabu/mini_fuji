@@ -26,6 +26,6 @@ func _process( _delta ):
 	%StatusLabel.text = "frame: %d" % [frame_counter]
 
 func _on_send_pressed():
-	var addr = "udp://%s" % %IPEdit.text
+	var addr = "udp:%s" % %IPEdit.text
 	var rc = fuji.send_udp_message( addr, 5002, "Godot knocks the door" )
 	addLog( "Sending udp msg to %s => %d " % [addr, rc] )
