@@ -140,3 +140,4 @@ game/bin/libfuji.*
 
 builds
 builds_release
+*.obj
