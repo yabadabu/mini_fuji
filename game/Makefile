@@ -36,6 +36,7 @@ help:
 
 # apk/aab in debug
 apk:
+	@make check_android
 	${GODOT} --headless --export-debug Android $(BUILDS)/game.aab
 
 android_build:
@@ -57,6 +58,13 @@ ipa_release:
 	@echo ✅ Increased iOS build number
 	${GODOT} --headless --export-release iOS $(BUILDS_RELEASE)/game.ipa 
 
+check_android:
+	@echo ✅ Checking godot Plugin configuration for Android
+	@if ! grep -q "GodotAndroidPluginExpedition/plugin.cfg" project.godot; then \
+		echo "Error: 'GodotAndroidPluginExpedition/plugin.cfg' not found in project.godot"; \
+		exit 1; \
+	fi
+
 apk_release:
 	rm -rf $(BUILDS_RELEASE)
 	mkdir -p $(BUILDS_RELEASE)
@@ -65,6 +73,7 @@ apk_release:
 	cd .. && scons platform=android target=template_release
 	cd .. && scons platform=android target=template_release arch=armv7
 	@echo ✅ Generated Expedition Plugin
+	@make check_android
 	make inc_apk_build_number
 	@echo ⏩ Generating App
 	${GODOT} --headless --export-release Android $(BUILDS_RELEASE)/game.aab
