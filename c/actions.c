@@ -142,7 +142,6 @@ bool eval_step( evaluation_t* ev ) {
         if( strcmp( ni->ip, "127.0.0.1" ) == 0 )
           continue;
 
-
         // in iOS en0/en1 are the ethernet adapters
         //        pdp_ip* are 3G,4G cellular data
         //        ipsec*  are VPN addresses
@@ -162,7 +161,7 @@ bool eval_step( evaluation_t* ev ) {
       }
 
       if( !best_ni )
-        return eval_error( ev, "Failed to identify local ethernet ip" ); 
+        return eval_error( ev, "Failed to identify local ip" ); 
 
       dbg( DbgInfo, "Using %s IP:%s Broadcast:%s\n", best_ni->name, best_ni->ip, best_ni->broadcast);
       if( !discovery_start( best_ni->ip, best_ni->broadcast ) )

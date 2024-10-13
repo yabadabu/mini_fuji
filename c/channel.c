@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>      // perror
+#include <stdio.h>
 #include <stdlib.h>
 #include "dbg.h"
 
@@ -28,11 +28,7 @@
 #include <fcntl.h>      // for fcntl()
 #include <unistd.h>     // for close()
 #include <netinet/tcp.h>   // For TCP_NODELAY
-//#include <netinet/in.h>
-//#include <sys/socket.h>
-//#include <sys/types.h>
 #include <sys/select.h>
-//#include <sys/uio.h>
 #include <arpa/inet.h>  // for inet_addr(), struct sockaddr_in
 #include <netdb.h>      // getaddrinfo
 #include <ifaddrs.h>    // getifaddrs
@@ -123,22 +119,21 @@ int ch_broadcast( channel_t* ch, const void* msg, uint32_t msg_size, const char*
   assert( ch->is_udp );
 
   if( !ch->is_broadcast ) {
-
     if( !set_udp_broadcast( ch->fd ) ) {
       sys_close(ch->fd);
       return false;
     }
-    //if( is_broadcast )
-    dbg( DbgInfo, "UDP set_udp_broadcast OK\n");
     ch->is_broadcast = true;
   }
 
-  struct sockaddr_in addr;
   if( !broadcast_addr )
     broadcast_addr = broadcast_ip;
-  dbg( DbgInfo, "ch_broadcast on fd %d to %s\n", ch->fd, broadcast_addr ); 
+
+  struct sockaddr_in addr;
   if( !ch_make_address( &addr, broadcast_addr, ch->port ) )
     return -1;
+
+  dbg( DbgTrace, "ch_broadcast on fd %d to %s:%d\n", ch->fd, broadcast_addr, ch->port ); 
 
   // Do the actual broadcast
   int rc = sendto(ch->fd, msg, msg_size, 0, (struct sockaddr*)&addr, sizeof(addr));
@@ -200,14 +195,12 @@ bool ch_create( channel_t* ch, const char* conn_info, int port ) {
   socket_t sockfd = -1;
   if( strncmp( conn_info, "udp:", 4 ) == 0 ) {
     ch->is_udp = true;
-    dbg( DbgInfo, "UDP creation\n");
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
       dbg( DbgError, "udp socket creation failed %d\n", sys_error_code);
       return false;
     }
-    dbg( DbgInfo, "UDP create fd => %d\n", sockfd);
   }
   else if( strncmp( conn_info, "tcp_server:", 11 ) == 0 ) {
     ch->is_server = true;
@@ -327,7 +320,7 @@ bool ch_can_io( channel_t* ch, int io_op, struct timeval* tv ) {
   // Use select() to wait for the socket to be ready for reading/writing
   int ret = select((int)(sockfd + 1), read_fds, write_fds, NULL, tv);
   if (ret < 0) {
-    dbg( DbgError, "select failed %d\n", errno);
+    dbg( DbgError, "select failed %d\n", sys_error_code);
     return false;
 
   } else if (ret > 0 && FD_ISSET(sockfd, &fds)) {
@@ -362,7 +355,7 @@ int ch_read( channel_t* ch, void *out_buffer, uint32_t max_length, int usecs ) {
         if (err_code == EAGAIN || err_code == CH_ERR_WOULD_BLOCK ) {
             break;
         } else {
-            perror("read");
+            dbg( DbgError, "read failed %d\n", sys_error_code);
             return -1;
         }
     } else if (bytes_read == 0) {
@@ -393,7 +386,7 @@ int ch_write( channel_t* ch, const void* buffer, uint32_t length ) {
         break;
 
       } else {
-        perror("write");
+        dbg( DbgError, "write failed %d\n", sys_error_code);
         return -1;
       }
     }

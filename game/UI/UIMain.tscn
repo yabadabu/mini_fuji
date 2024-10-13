@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://dhfligpf8qg4"]
+[gd_scene load_steps=3 format=3 uid="uid://dhfligpf8qg4"]
 
-[ext_resource type="Script" path="res://UI/UIMain.gd" id="1_p588u"]
+[ext_resource type="Script" path="res://ui/UIMain.gd" id="1_p588u"]
+[ext_resource type="PackedScene" uid="uid://dkq2uuk5ebxkk" path="res://ui/components/UILog.tscn" id="2_ru8ul"]
 
 [node name="UiMain" type="Control"]
 layout_mode = 3
@@ -11,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_p588u")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="Tabs" type="TabContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,68 +20,43 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="StartButton" type="Button" parent="VBoxContainer"]
+[node name="App" type="VBoxContainer" parent="Tabs"]
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="Tabs/App"]
 layout_mode = 2
 size_flags_vertical = 4
 text = "Start"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer"]
-layout_mode = 2
-
-[node name="Send" type="Button" parent="VBoxContainer/HBoxContainer"]
+[node name="DumpInterfacesButton" type="Button" parent="Tabs/App"]
 layout_mode = 2
 size_flags_vertical = 4
-text = "Send"
+text = "Network Interfaces"
 
-[node name="BindEdit" type="LineEdit" parent="VBoxContainer/HBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Tabs/App"]
+layout_mode = 2
+
+[node name="Send" type="Button" parent="Tabs/App/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Send UDP"
+
+[node name="BindEdit" type="LineEdit" parent="Tabs/App/HBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
+text = "255.255.255.255"
 placeholder_text = "255.255.255.255"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-
-[node name="LogLines" type="VBoxContainer" parent="VBoxContainer/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-
-[node name="Label" type="Label" parent="VBoxContainer/ScrollContainer/LogLines"]
-layout_mode = 2
-text = "This is line 1
-"
-
-[node name="Label2" type="Label" parent="VBoxContainer/ScrollContainer/LogLines"]
-layout_mode = 2
-text = "This is line 2
-"
-
-[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+[node name="StatusLabel" type="Label" parent="Tabs/App"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Status:"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="VBoxContainer"]
+[node name="Logs" parent="Tabs" instance=ExtResource("2_ru8ul")]
+visible = false
 layout_mode = 2
 
-[node name="ClearButton" type="Button" parent="VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_vertical = 4
-text = "Clear
-"
-
-[node name="DumpInterfaces" type="Button" parent="VBoxContainer/HBoxContainer2"]
-layout_mode = 2
-size_flags_vertical = 4
-text = "Network IPs
-"
-
-[node name="GDFujiController" type="GDFujiController" parent="."]
-
-[connection signal="pressed" from="VBoxContainer/StartButton" to="." method="_on_start_button_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/Send" to="." method="_on_send_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer2/ClearButton" to="." method="_on_clear_button_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer2/DumpInterfaces" to="." method="_on_dump_interfaces_pressed"]
+[connection signal="pressed" from="Tabs/App/StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="Tabs/App/DumpInterfacesButton" to="." method="_on_dump_interfaces_button_pressed"]
+[connection signal="pressed" from="Tabs/App/HBoxContainer/Send" to="." method="_on_send_pressed"]

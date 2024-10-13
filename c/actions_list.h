@@ -7,7 +7,9 @@ const op_code_t actions_take[] = {
   { OP_CONNECT_TO_CAMERA },
   { OC_READ_STORAGE_IDS  },
   { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_USB },
-//  { OC_SET_PROP,         &prop_exposure_time,   PDV_Exposure_Time_5_secs },
+  //{ OC_SET_PROP,         PDV_Exposure_Time,   PDV_Exposure_Time_5_secs },
+  { OC_SET_PROP,         PDV_Exposure_Time,   PDV_Exposure_Time_1_800_sec },
+
   { OC_SET_PROP_ARRAY,   },
   { OC_GET_PROP_ARRAY,   },
 
@@ -22,7 +24,7 @@ const op_code_t actions_take[] = {
   //{ OC_SAVE_IMAGES       },
   { OC_DELETE_IMAGES     },
   { OC_TERMINATE_CAPTURE },
-  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_Camera },
+  { OC_SET_PROP,         PDV_Priority_Mode,   PDV_Priority_Mode_Camera },   // This returns Busy
   { OC_END_OF_PROGRAM    }
 };
 

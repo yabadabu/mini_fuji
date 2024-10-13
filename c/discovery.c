@@ -72,17 +72,15 @@ bool discovery_start( const char* local_ip, const char* broadcast_addr ) {
 bool discovery_update( camera_info_t* out_camera, int accept_time_usecs ) {
   assert( out_camera );
 
-  // Send a udp msg until we get a camera respondring
+  // Send a udp msg until we get a camera responding
   int brc = ch_broadcast( &ds.ch_udp, blob_data( &ds.discovery_msg ), blob_size( &ds.discovery_msg ), ds.broadcast_addr );
 
   // The response is ... he tries to connect to the ip we sent and sends his ip
   channel_t ch_client;
 
-  const int ms_to_usecs = 1000;
-
   if( ch_accept( &ds.ch_discovery, &ch_client, accept_time_usecs ) ) {
-    dbg( DbgInfo, "Someone knock the door!\n");
 
+    const int ms_to_usecs = 1000;
     while( !ch_read_blob( &ch_client, &ds.buff, 0 ) )
       ch_wait( ms_to_usecs );
     

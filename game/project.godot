@@ -11,9 +11,15 @@ config_version=5
 [application]
 
 config/name="camera_app"
-run/main_scene="res://UI/UIMain.tscn"
+config/version="1.0.0"
+run/main_scene="res://ui/UIMain.tscn"
 config/features=PackedStringArray("4.2", "Mobile")
 config/icon="res://icon.svg"
+
+[autoload]
+
+Fuji="*res://autoload/fuji.gd"
+GameEvents="*res://autoload/events.gd"
 
 [display]
 

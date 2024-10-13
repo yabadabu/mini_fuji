@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3 uid="uid://dkq2uuk5ebxkk"]
+
+[ext_resource type="Script" path="res://ui/components/UILog.gd" id="1_bc1b3"]
+
+[node name="UiLog" type="VBoxContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_bc1b3")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LogLines" type="VBoxContainer" parent="ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Label" type="Label" parent="ScrollContainer/LogLines"]
+layout_mode = 2
+text = "This is line 1
+"
+
+[node name="Label2" type="Label" parent="ScrollContainer/LogLines"]
+layout_mode = 2
+text = "This is line 2
+"
+
+[node name="Controls" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="ClearButton" type="Button" parent="Controls"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "Clear
+"
+
+[node name="Filter" type="LineEdit" parent="Controls"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Filter"
+
+[connection signal="pressed" from="Controls/ClearButton" to="." method="_on_clear_button_pressed"]

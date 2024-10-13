@@ -58,7 +58,7 @@ static void on_dbg_msg( void* context, enum eDbgLevel level, const char* msg ) {
 
 // ---------------
 GDFujiController::GDFujiController() {
-  setDbgCallback( this, DbgTrace, &on_dbg_msg );
+  setDbgCallback( this, DbgInfo, &on_dbg_msg );
   is_valid = conn_create( &conn );
   
   conn.on_event.context = this;
