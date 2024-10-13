@@ -20,6 +20,7 @@ help:
 	@echo "  "
 	@echo To build an android
 	@echo "  make android_plugin        -- Build Android Plugin (kotlin code)"
+	@echo "  make android_expedition_plugin -- (C++ code)"
 	@echo "  make apk                   -- Build Android binary (no plugins recompiled)"
 	@echo "  make apk_release           -- Recompiles in release mode"
 	@echo "  make install_apk           -- Installs debug build"
@@ -40,11 +41,16 @@ apk:
 	${GODOT} --headless --export-debug Android $(BUILDS)/game.aab
 
 android_build:
-	make android_plugin && make apk && make install_apk && make log_apk
+	make android_expedition_plugin && make android_plugin && make apk && make install_apk && make log_apk
 
 android_plugin:
 	echo "Generating Android Plugin"
 	cd ../android-plugin && ./gradlew assemble
+
+android_expedition_plugin:
+	echo "Generating Expedition Plugin for Android in Debug"
+	cd .. && scons platform=android target=template_debug
+	cd .. && scons platform=android target=template_debug arch=armv7
 
 ipa:
 	mkdir -p $(BUILDS)
