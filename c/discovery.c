@@ -1,7 +1,5 @@
 #include <string.h>
-//#include <stdio.h>
 #include <stdlib.h>     // atoi
-#include <stdio.h>     // printf
 #include <assert.h>
 #include "discovery.h"
 #include "channel.h"
@@ -13,6 +11,7 @@ typedef struct {
   blob_t    discovery_msg;
   channel_t ch_udp;
   channel_t ch_discovery;
+  char      broadcast_addr[32];
 } discovery_service_t;
 
 #define DISCOVERY_BROADCAST_UDP_PORT    51562
@@ -39,11 +38,17 @@ bool ch_read_blob( channel_t* ch, blob_t* blob, int usecs ) {
   return false;
 }
 
-bool discovery_start( const char* local_ip ) {
+// The local ip is required because it tells the camera where he needs to connect to
+// The broadcast is required because in some sceneario the default 255.255.255.255
+// might not reach the camera, for example when the iPhone is acting as access point to
+// the camera and the broadcast is sent from the iPhone
+bool discovery_start( const char* local_ip, const char* broadcast_addr ) {
   
   blob_create( &ds.buff, 0, 1024 );
-  if( !ch_create( &ds.ch_udp, "udp:255.255.255.255", DISCOVERY_BROADCAST_UDP_PORT) )
+  if( !ch_create( &ds.ch_udp, "udp:0.0.0.0", DISCOVERY_BROADCAST_UDP_PORT) )
     return false;
+
+  strcpy( ds.broadcast_addr, broadcast_addr );
 
   // Msg to the cameras my identify. prefix + ip + suffix
   const char* prefix = "DISCOVERY * HTTP/1.1\r\nHOST: ";
@@ -68,7 +73,7 @@ bool discovery_update( camera_info_t* out_camera, int accept_time_usecs ) {
   assert( out_camera );
 
   // Send a udp msg until we get a camera respondring
-  int brc = ch_broadcast( &ds.ch_udp, blob_data( &ds.discovery_msg ), blob_size( &ds.discovery_msg ) );
+  int brc = ch_broadcast( &ds.ch_udp, blob_data( &ds.discovery_msg ), blob_size( &ds.discovery_msg ), ds.broadcast_addr );
 
   // The response is ... he tries to connect to the ip we sent and sends his ip
   channel_t ch_client;

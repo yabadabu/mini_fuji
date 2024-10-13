@@ -105,15 +105,13 @@ void GDFujiController::_process(double delta) {
 
 }
 
-int GDFujiController::send_udp_message( const String& bind_addr, int port, const String& msg, const String& broadcast) {
-  CharString addr_utf8 = bind_addr.utf8();
+int GDFujiController::send_udp_message( const String& broadcast, int port, const String& msg) {
   CharString msg_utf8 = msg.utf8();
   CharString broadcast_utf8 = broadcast.utf8();
-  const char* c_addr = addr_utf8.get_data();
   const char* c_msg = msg_utf8.get_data();
   const char* c_broadcast = broadcast_utf8.get_data();
   channel_t ch;
-  if( !ch_create( &ch, bind_addr.utf8().get_data(), port ) )
+  if( !ch_create( &ch, "udp:0.0.0.0", port ) )
     return -100;
   int rc = ch_broadcast( &ch, c_msg, strlen( c_msg ), c_broadcast );
   ch_close( &ch );

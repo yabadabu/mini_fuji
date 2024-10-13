@@ -130,15 +130,16 @@ bool eval_step( evaluation_t* ev ) {
 
     if( sub_step == 0 ) {
       dbg( DbgInfo, "OP_DISCOVER_CAMERA. Start\n");
-      network_interface_t ni[16];
-      int num_interfaces = ch_get_local_network_interfaces( ni, 16 );
-      int best_idx = -1;
+      network_interface_t nis[16];
+      int num_interfaces = ch_get_local_network_interfaces( nis, 16 );
+      network_interface_t* best_ni = NULL;
       bool best_is_ethernet = false;
       bool best_is_bridge = false;
       for( int i=0; i<num_interfaces; ++i ) {
+        network_interface_t* ni = nis + i;
 
         // Skip localhost
-        if( strcmp( ni[i].ip, "127.0.0.1" ) == 0 )
+        if( strcmp( ni->ip, "127.0.0.1" ) == 0 )
           continue;
 
 
@@ -146,26 +147,25 @@ bool eval_step( evaluation_t* ev ) {
         //        pdp_ip* are 3G,4G cellular data
         //        ipsec*  are VPN addresses
         //        bridge* are the WIFI shared connections
-        bool is_ethernet = strncmp( ni[i].name, "en", 2 ) == 0;
-        bool is_bridge = false; //strncmp( ni[i].name, "bridge", 6 ) == 0;
+        bool is_ethernet = strncmp( ni->name, "en", 2 ) == 0;
+        bool is_bridge = strncmp( ni->name, "bridge", 6 ) == 0;
 
-        bool keep_it = ( best_idx == -1 )
+        bool keep_it = ( !best_ni )
                     || ( is_bridge && !best_is_bridge)
                     || ( !best_is_bridge && is_ethernet && !best_is_ethernet );
-        dbg( DbgInfo, "%16s : %s (E:%d B:%d -> %d)\n", ni[i].ip, ni[i].name, is_ethernet, is_bridge, keep_it );
+        dbg( DbgInfo, "%16s : %s (E:%d B:%d -> %d)\n", ni->ip, ni->name, is_ethernet, is_bridge, keep_it );
         if( keep_it ) {
-          best_idx = i;
+          best_ni = ni;
           best_is_ethernet = is_ethernet;
           best_is_bridge = is_bridge;
         }
       }
 
-      const char* local_ip = ( best_idx != -1 ) ? ni[ best_idx ].ip : NULL;
-      if( !local_ip )
+      if( !best_ni )
         return eval_error( ev, "Failed to identify local ethernet ip" ); 
 
-      dbg( DbgInfo, "Using localIP %s\n", local_ip);
-      if( !discovery_start( local_ip ) )
+      dbg( DbgInfo, "Using %s IP:%s Broadcast:%s\n", best_ni->name, best_ni->ip, best_ni->broadcast);
+      if( !discovery_start( best_ni->ip, best_ni->broadcast ) )
         return eval_error( ev, "Failed to discovery_start" ); 
       eval_next_substep( ev );
 

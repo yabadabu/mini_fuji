@@ -70,25 +70,32 @@ bool take_shot() {
   return true;
 }
 
-int send_udp( const char* addr ) {
+bool send_udp( const char* broadcast_addr ) {
   int port = 5002;
   channel_t ch;
-  if( !ch_create( &ch, addr, port ))
-    return -1;
-  if (!ch_broadcast(&ch, "Hello", 5))
-    return -2;
+  if( !ch_create( &ch, "udp:0.0.0.0", port ))
+    return false;
+  if (!ch_broadcast(&ch, "Hello", 5, broadcast_addr))
+    return false;
   ch_close(&ch);
-  return 0;
+  return true;
 }
 
 
 int main( int argc, char** argv ) {
   setDbgCallback(NULL, DbgTrace, &my_output_fn);
 
-  if (argc > 1) {
+  if (argc > 2) {
     if (!send_udp(argv[1]))
       return -1;
     dbg(DbgInfo, "All good\n");
+  } else {
+    printf( "Usage: %s bind_addr broadcast_addr\n", argv[0] );
+    network_interface_t nif[8];
+    ch_get_local_network_interfaces( nif, 8 );
+    // From bridge IP : 172.20.10.1
+    // And broadcast  : 255.255.255.240
+    // Broadcast addr : 172.20.10.15 
   }
 
   //if( !take_shot() )
